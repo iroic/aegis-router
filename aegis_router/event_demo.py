@@ -5,7 +5,7 @@ import argparse
 from .agent import HybridRoutingScorer
 from .event_sim import EventStats, EventDrivenSimulator
 from .graph import generate_random_graph
-from .solvers import AdaptiveRiskSolver, HybridSolver, RiskAwareHybridSolver, ShortestPathSolver
+from .solvers import AdaptiveRiskSolver, HybridSolver, PersistentLearningSolver, RiskAwareHybridSolver, ShortestPathSolver
 
 
 def fmt(s: EventStats) -> str:
@@ -29,6 +29,9 @@ def main() -> None:
     p.add_argument("--sybil-ratio", type=float, default=0.2)
     p.add_argument("--ttl", type=int, default=18)
     p.add_argument("--seed", type=int, default=31)
+    p.add_argument("--learn", action="store_true", help="enable persistent learning solver")
+    p.add_argument("--state", default="aegis_state.json", help="persistent learning state JSON path")
+    p.add_argument("--runs", type=int, default=1, help="number of repeated learning runs")
     args = p.parse_args()
 
     graph = generate_random_graph(nodes=args.nodes, degree=5, sybil_ratio=args.sybil_ratio, seed=args.seed)
@@ -57,6 +60,19 @@ def main() -> None:
         ttl=args.ttl,
     ).run(duration=args.duration, traffic_rate=args.traffic_rate)
 
+    learned_runs: list[EventStats] = []
+    if args.learn:
+        for run in range(args.runs):
+            solver = PersistentLearningSolver(state_path=args.state)
+            stats = EventDrivenSimulator(
+                graph,
+                solver,
+                seed=args.seed + 1 + run,
+                ttl=args.ttl,
+            ).run(duration=args.duration, traffic_rate=args.traffic_rate)
+            solver.save()
+            learned_runs.append(stats)
+
     print("Aegis Router v0.3 - event-driven P2P simulation")
     print(
         f"nodes={args.nodes} duration={args.duration:.1f}s traffic_rate={args.traffic_rate:.1f}/s "
@@ -66,6 +82,10 @@ def main() -> None:
     print("hybrid v0.3   :", fmt(hybrid))
     print("risk-aware   :", fmt(risk_aware))
     print("adaptive-risk:", fmt(adaptive))
+    for idx, stats in enumerate(learned_runs, start=1):
+        print(f"learned #{idx:02d}  :", fmt(stats))
+    if args.learn:
+        print(f"state file    : {args.state}")
     print()
     print("v0.3 ajoute: trafic Poisson, files d'attente, pertes réelles, TTL, paquets comme épisodes asynchrones.")
 
