@@ -30,12 +30,14 @@ python3 -m aegis_router.event_demo --nodes 80 --duration 8 --traffic-rate 12 --s
 
 ```bash
 cd /home/ghost/aegis-router
-python3 -m aegis_router.event_demo --learn --runs 5 --state aegis_state.json --nodes 80 --duration 8 --traffic-rate 12 --sybil-ratio 0.2 --drain 5
+python3 -m aegis_router.event_demo --learn --learn-mode edge --runs 5 --state aegis_state.json --nodes 80 --duration 8 --traffic-rate 12 --sybil-ratio 0.2 --drain 5
 ```
 
-Le fichier `aegis_state.json` sauvegarde la reputation des voisins: livraisons,
-drops, touches Sybil et budget de risque. En relancant avec le meme `--state`,
-le routeur reprend ce qu'il a appris et evite progressivement les mauvais hops.
+Le fichier `aegis_state.json` sauvegarde la reputation des voisins et des liens
+orientés `(from_node -> to_node)`: livraisons, drops, touches Sybil, pertes de
+lien, boucles et budget de risque. En relancant avec le meme `--state`,
+le routeur reprend ce qu'il a appris et evite progressivement les mauvais hops
+sans bannir globalement un voisin qui n'est mauvais que depuis un certain lien.
 `--drain` laisse le reseau vider les paquets deja en vol apres la periode de
 generation, ce qui evite de compter ces paquets comme des pertes dures.
 

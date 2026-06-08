@@ -5,7 +5,7 @@ import argparse
 from .agent import HybridRoutingScorer
 from .event_sim import EventStats, EventDrivenSimulator
 from .graph import generate_random_graph
-from .solvers import AdaptiveRiskSolver, HybridSolver, PersistentLearningSolver, RiskAwareHybridSolver, ShortestPathSolver
+from .solvers import AdaptiveRiskSolver, EdgeLearningSolver, HybridSolver, PersistentLearningSolver, RiskAwareHybridSolver, ShortestPathSolver
 
 
 def fmt(s: EventStats) -> str:
@@ -40,6 +40,7 @@ def main() -> None:
     p.add_argument("--learn", action="store_true", help="enable persistent learning solver")
     p.add_argument("--state", default="aegis_state.json", help="persistent learning state JSON path")
     p.add_argument("--runs", type=int, default=1, help="number of repeated learning runs")
+    p.add_argument("--learn-mode", choices=["peer", "edge"], default="edge", help="persistent learner type")
     args = p.parse_args()
 
     graph = generate_random_graph(nodes=args.nodes, degree=5, sybil_ratio=args.sybil_ratio, seed=args.seed)
@@ -72,7 +73,7 @@ def main() -> None:
     learned_runs: list[EventStats] = []
     if args.learn:
         for run in range(args.runs):
-            solver = PersistentLearningSolver(state_path=args.state)
+            solver = EdgeLearningSolver(state_path=args.state) if args.learn_mode == "edge" else PersistentLearningSolver(state_path=args.state)
             stats = EventDrivenSimulator(
                 graph,
                 solver,
@@ -95,6 +96,7 @@ def main() -> None:
         print(f"learned #{idx:02d}  :", fmt(stats))
     if args.learn:
         print(f"state file    : {args.state}")
+        print(f"learn mode    : {args.learn_mode}")
     print("drop reasons:")
     print("  shortest-path :", drop_fmt(shortest))
     print("  hybrid v0.3   :", drop_fmt(hybrid))

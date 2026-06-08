@@ -19,6 +19,8 @@ class Packet:
     queue_delay: float = 0.0
     loss_risk: float = 0.0
     touched_sybil: bool = False
+    last_from: NodeId | None = None
+    last_neighbor: NodeId | None = None
 
     def __post_init__(self) -> None:
         if self.node is None:

@@ -75,6 +75,7 @@ class RiskAwareHybridSolver:
         dropped: bool,
         touched_sybil: bool = False,
         reason: str | None = None,
+        from_node: NodeId | None = None,
     ) -> None:
         old = self.peer_risk[neighbor] * self.reputation_decay
         signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
@@ -119,8 +120,9 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
         dropped: bool,
         touched_sybil: bool = False,
         reason: str | None = None,
+        from_node: NodeId | None = None,
     ) -> None:
-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason)
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
         self._recent_drops.append(dropped)
         self._recent_sybil.append(touched_sybil)
         if len(self._recent_drops) > self.window_size:
@@ -200,8 +202,9 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
         dropped: bool,
         touched_sybil: bool = False,
         reason: str | None = None,
+        from_node: NodeId | None = None,
     ) -> None:
-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason)
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
         score = self.peer_scores[neighbor]
         if delivered:
             score.delivered += 1
@@ -219,6 +222,83 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
 
     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
         return super()._score(graph, packet, nb) - (self.learned_penalty * self.peer_scores[nb].badness)
+
+
+EdgeKey = tuple[NodeId, NodeId]
+
+
+@dataclass
+class EdgeLearningSolver(PersistentLearningSolver):
+    """Persistent learner with directional edge memory.
+
+    Neighbor-level reputation is coarse. This tracks `(from_node, to_node)` so a
+    peer can be bad from one route segment and still usable from another.
+    """
+
+    edge_penalty: float = 1.0
+    edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+
+    def load(self) -> None:
+        if not Path(self.state_path).exists():
+            return
+        data = json.loads(Path(self.state_path).read_text())
+        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+        for key, value in data.get("peers", {}).items():
+            node = int(key)
+            self.peer_scores[node] = PeerScore(**value)
+            self.peer_risk[node] = self.peer_scores[node].badness
+        for key, value in data.get("edges", {}).items():
+            left, right = key.split("->", 1)
+            self.edge_scores[(int(left), int(right))] = PeerScore(**value)
+
+    def save(self) -> None:
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "version": 2,
+            "risk_budget": self.risk_budget,
+            "peers": {str(k): asdict(v) for k, v in self.peer_scores.items()},
+            "edges": {f"{a}->{b}": asdict(v) for (a, b), v in self.edge_scores.items()},
+        }
+        self.state_path.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        super().observe_result(
+            neighbor=neighbor,
+            delivered=delivered,
+            dropped=dropped,
+            touched_sybil=touched_sybil,
+            reason=reason,
+            from_node=from_node,
+        )
+        if from_node is None:
+            return
+        score = self.edge_scores[(from_node, neighbor)]
+        if delivered:
+            score.delivered += 1
+        if dropped:
+            score.drops += 1
+        if touched_sybil:
+            score.sybil_touches += 1
+        if reason == "link_loss":
+            score.link_losses += 1
+        elif reason == "loop":
+            score.loops += 1
+        elif reason == "ttl_expired":
+            score.ttl_expired += 1
+
+    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+        assert packet.node is not None
+        edge_badness = self.edge_scores[(packet.node, nb)].badness
+        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
 
 
 @dataclass

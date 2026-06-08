@@ -139,6 +139,7 @@ class EventDrivenSimulator:
         if self.rng.random() < effective_loss:
             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+            pkt.last_from = pkt.node
             pkt.last_neighbor = nxt
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
             self._drop(pkt, reason)
@@ -153,6 +154,7 @@ class EventDrivenSimulator:
         pkt.latency += metrics.latency + queue_delay + service
         pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+        pkt.last_from = pkt.node
         pkt.node = nxt
         pkt.last_neighbor = nxt
         pkt.hops += 1
@@ -162,8 +164,16 @@ class EventDrivenSimulator:
     def _notify_solver(self, pkt: Packet, *, delivered: bool, dropped: bool, reason: str | None = None) -> None:
         observer = getattr(self.solver, "observe_result", None)
         neighbor = getattr(pkt, "last_neighbor", None)
+        from_node = getattr(pkt, "last_from", None)
         if observer is not None and neighbor is not None:
-            observer(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=pkt.touched_sybil, reason=reason)
+            observer(
+                neighbor=neighbor,
+                delivered=delivered,
+                dropped=dropped,
+                touched_sybil=pkt.touched_sybil,
+                reason=reason,
+                from_node=from_node,
+            )
 
     def _stats(self) -> EventStats:
         all_packets = list(self._packets.values())
