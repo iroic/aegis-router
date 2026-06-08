@@ -105,9 +105,11 @@ class EventDrivenSimulator:
     def _handle_arrive(self, time: float, packet_id: int) -> None:
         pkt = self._packets[packet_id]
         if pkt.node == pkt.dst:
+            self._notify_solver(pkt, delivered=True, dropped=False)
             self._delivered.append(pkt)
             return
         if pkt.ttl <= 0 or pkt.node in pkt.visited:
+            self._notify_solver(pkt, delivered=False, dropped=True)
             self._dropped.append(pkt)
             return
         assert pkt.node is not None
@@ -122,6 +124,8 @@ class EventDrivenSimulator:
         if self.rng.random() < effective_loss:
             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+            pkt.last_neighbor = nxt
+            self._notify_solver(pkt, delivered=False, dropped=True)
             self._dropped.append(pkt)
             return
         key = (pkt.node, nxt)
@@ -135,9 +139,16 @@ class EventDrivenSimulator:
         pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
         pkt.node = nxt
+        pkt.last_neighbor = nxt
         pkt.hops += 1
         pkt.ttl -= 1
         self._schedule(Event(start + service + metrics.latency, "arrive", pkt.packet_id))
+
+    def _notify_solver(self, pkt: Packet, *, delivered: bool, dropped: bool) -> None:
+        observer = getattr(self.solver, "observe_result", None)
+        neighbor = getattr(pkt, "last_neighbor", None)
+        if observer is not None and neighbor is not None:
+            observer(neighbor=neighbor, delivered=delivered, dropped=dropped)
 
     def _stats(self) -> EventStats:
         all_packets = list(self._packets.values())

@@ -27,8 +27,10 @@ python3 -m aegis_router.event_demo --nodes 80 --duration 8 --traffic-rate 12 --s
 ```
 
 Cette simulation ajoute trafic Poisson, files d'attente, pertes stochastiques,
-TTL et paquets comme episodes asynchrones. Elle est inspiree des simulateurs
-MA-DRL/risk-aware routing trouves dans SatCom-TELMA et skypitcher.
+TTL et paquets comme episodes asynchrones. Elle compare aussi un solver
+risk-aware avec budget de risque et reputation dynamique par voisin. Elle est
+inspiree des simulateurs MA-DRL/risk-aware routing trouves dans SatCom-TELMA et
+skypitcher.
 
 ## Lancer les tests
 
