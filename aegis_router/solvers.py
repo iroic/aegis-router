@@ -235,7 +235,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     peer can be bad from one route segment and still usable from another.
     """
 
-    edge_penalty: float = 1.0
+    edge_penalty: float = 0.6
     edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
 
     def load(self) -> None:

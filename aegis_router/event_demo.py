@@ -41,6 +41,8 @@ def main() -> None:
     p.add_argument("--state", default="aegis_state.json", help="persistent learning state JSON path")
     p.add_argument("--runs", type=int, default=1, help="number of repeated learning runs")
     p.add_argument("--learn-mode", choices=["peer", "edge"], default="edge", help="persistent learner type")
+    p.add_argument("--edge-penalty", type=float, default=1.0, help="penalty applied to bad edges")
+    p.add_argument("--risk-budget", type=float, default=0.35, help="max allowed risk per packet")
     args = p.parse_args()
 
     graph = generate_random_graph(nodes=args.nodes, degree=5, sybil_ratio=args.sybil_ratio, seed=args.seed)
@@ -73,7 +75,7 @@ def main() -> None:
     learned_runs: list[EventStats] = []
     if args.learn:
         for run in range(args.runs):
-            solver = EdgeLearningSolver(state_path=args.state) if args.learn_mode == "edge" else PersistentLearningSolver(state_path=args.state)
+            solver = EdgeLearningSolver(state_path=args.state, edge_penalty=args.edge_penalty, risk_budget=args.risk_budget) if args.learn_mode == "edge" else PersistentLearningSolver(state_path=args.state, risk_budget=args.risk_budget)
             stats = EventDrivenSimulator(
                 graph,
                 solver,
