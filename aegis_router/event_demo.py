@@ -5,7 +5,7 @@ import argparse
 from .agent import HybridRoutingScorer
 from .event_sim import EventStats, EventDrivenSimulator
 from .graph import generate_random_graph
-from .solvers import HybridSolver, RiskAwareHybridSolver, ShortestPathSolver
+from .solvers import AdaptiveRiskSolver, HybridSolver, RiskAwareHybridSolver, ShortestPathSolver
 
 
 def fmt(s: EventStats) -> str:
@@ -50,6 +50,13 @@ def main() -> None:
         ttl=args.ttl,
     ).run(duration=args.duration, traffic_rate=args.traffic_rate)
 
+    adaptive = EventDrivenSimulator(
+        graph,
+        AdaptiveRiskSolver(),
+        seed=args.seed + 1,
+        ttl=args.ttl,
+    ).run(duration=args.duration, traffic_rate=args.traffic_rate)
+
     print("Aegis Router v0.3 - event-driven P2P simulation")
     print(
         f"nodes={args.nodes} duration={args.duration:.1f}s traffic_rate={args.traffic_rate:.1f}/s "
@@ -58,6 +65,7 @@ def main() -> None:
     print("shortest-path :", fmt(shortest))
     print("hybrid v0.3   :", fmt(hybrid))
     print("risk-aware   :", fmt(risk_aware))
+    print("adaptive-risk:", fmt(adaptive))
     print()
     print("v0.3 ajoute: trafic Poisson, files d'attente, pertes réelles, TTL, paquets comme épisodes asynchrones.")
 

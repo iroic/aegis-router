@@ -148,7 +148,7 @@ class EventDrivenSimulator:
         observer = getattr(self.solver, "observe_result", None)
         neighbor = getattr(pkt, "last_neighbor", None)
         if observer is not None and neighbor is not None:
-            observer(neighbor=neighbor, delivered=delivered, dropped=dropped)
+            observer(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=pkt.touched_sybil)
 
     def _stats(self) -> EventStats:
         all_packets = list(self._packets.values())

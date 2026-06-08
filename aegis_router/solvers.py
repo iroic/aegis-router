@@ -65,7 +65,7 @@ class RiskAwareHybridSolver:
         candidates = viable or neighbors
         return max(candidates, key=lambda nb: self._score(graph, packet, nb))
 
-    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool) -> None:
+    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool, touched_sybil: bool = False) -> None:
         old = self.peer_risk[neighbor] * self.reputation_decay
         signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
         self.peer_risk[neighbor] = max(0.0, min(1.0, old + signal))
@@ -80,6 +80,42 @@ class RiskAwareHybridSolver:
             visited=packet.visited,
             ttl_remaining=packet.ttl,
         ) - (self.reputation_penalty * self.peer_risk[nb])
+
+
+@dataclass
+class AdaptiveRiskSolver(RiskAwareHybridSolver):
+    """Risk-aware solver that adapts its budget from recent outcomes.
+
+    Drops mean we are too conservative / failing to find viable paths, so the
+    budget relaxes. Sybil touches mean we are accepting suspicious routes, so
+    the budget tightens. This keeps risk low without killing delivery.
+    """
+
+    risk_budget: float = 0.35
+    min_budget: float = 0.15
+    max_budget: float = 0.55
+    adapt_step: float = 0.06
+    window_size: int = 10
+    drop_threshold: float = 0.35
+    sybil_threshold: float = 0.5
+    _recent_drops: list[bool] = field(default_factory=list)
+    _recent_sybil: list[bool] = field(default_factory=list)
+
+    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool, touched_sybil: bool = False) -> None:
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil)
+        self._recent_drops.append(dropped)
+        self._recent_sybil.append(touched_sybil)
+        if len(self._recent_drops) > self.window_size:
+            self._recent_drops.pop(0)
+            self._recent_sybil.pop(0)
+        if len(self._recent_drops) < self.window_size:
+            return
+        drop_rate = sum(self._recent_drops) / self.window_size
+        sybil_rate = sum(self._recent_sybil) / self.window_size
+        if drop_rate > self.drop_threshold:
+            self.risk_budget = min(self.max_budget, self.risk_budget + self.adapt_step)
+        elif sybil_rate > self.sybil_threshold:
+            self.risk_budget = max(self.min_budget, self.risk_budget - self.adapt_step)
 
 
 @dataclass
