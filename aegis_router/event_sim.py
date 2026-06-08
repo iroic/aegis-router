@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import heapq
 import itertools
 import random
+from collections import Counter
 from statistics import mean
 from typing import Callable
 
@@ -24,6 +25,8 @@ class EventStats:
     generated: int
     delivered: int
     dropped: int
+    in_flight: int
+    drop_reasons: dict[str, int]
     avg_hops: float
     avg_latency: float
     avg_queue_delay: float
@@ -69,26 +72,36 @@ class EventDrivenSimulator:
         self._link_available: dict[tuple[NodeId, NodeId], float] = {}
         self._delivered: list[Packet] = []
         self._dropped: list[Packet] = []
+        self._drop_reasons: Counter[str] = Counter()
+        self._in_flight: list[Packet] = []
 
-    def run(self, *, duration: float, traffic_rate: float) -> EventStats:
+    def run(self, *, duration: float, traffic_rate: float, drain_time: float = 0.0) -> EventStats:
+        end_time = duration + max(0.0, drain_time)
         self._schedule(Event(0.0, "generate"))
         while self._events:
             time, _, event = heapq.heappop(self._events)
-            if time > duration:
+            if time > end_time:
                 break
             if event.kind == "generate":
-                self._handle_generate(time, duration, traffic_rate)
+                if time <= duration:
+                    self._handle_generate(time, duration, traffic_rate)
             elif event.kind == "arrive" and event.packet_id is not None:
                 self._handle_arrive(time, event.packet_id)
-        # In-flight packets at simulation end count as dropped/expired.
+        # In-flight packets are tracked separately, not counted as hard drops.
         completed = {p.packet_id for p in self._delivered + self._dropped}
         for pkt in self._packets.values():
             if pkt.packet_id not in completed:
-                self._dropped.append(pkt)
+                self._in_flight.append(pkt)
         return self._stats()
 
     def _schedule(self, event: Event) -> None:
         heapq.heappush(self._events, (event.time, next(self._counter), event))
+
+    def _drop(self, pkt: Packet, reason: str, *, notify: bool = True) -> None:
+        if notify:
+            self._notify_solver(pkt, delivered=False, dropped=True)
+        self._drop_reasons[reason] += 1
+        self._dropped.append(pkt)
 
     def _handle_generate(self, time: float, duration: float, traffic_rate: float) -> None:
         nodes = self.graph.nodes()
@@ -108,15 +121,17 @@ class EventDrivenSimulator:
             self._notify_solver(pkt, delivered=True, dropped=False)
             self._delivered.append(pkt)
             return
-        if pkt.ttl <= 0 or pkt.node in pkt.visited:
-            self._notify_solver(pkt, delivered=False, dropped=True)
-            self._dropped.append(pkt)
+        if pkt.ttl <= 0:
+            self._drop(pkt, "ttl_expired")
+            return
+        if pkt.node in pkt.visited:
+            self._drop(pkt, "loop")
             return
         assert pkt.node is not None
         pkt.visited.add(pkt.node)
         nxt = self.solver.next_hop(self.graph, pkt)
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
-            self._dropped.append(pkt)
+            self._drop(pkt, "no_route")
             return
         metrics = self.graph.metrics(pkt.node, nxt)
         extra_drop = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
@@ -125,8 +140,8 @@ class EventDrivenSimulator:
             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
             pkt.last_neighbor = nxt
-            self._notify_solver(pkt, delivered=False, dropped=True)
-            self._dropped.append(pkt)
+            reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
+            self._drop(pkt, reason)
             return
         key = (pkt.node, nxt)
         available = self._link_available.get(key, time)
@@ -157,6 +172,8 @@ class EventDrivenSimulator:
             generated=len(all_packets),
             delivered=len(delivered),
             dropped=len(self._dropped),
+            in_flight=len(self._in_flight),
+            drop_reasons=dict(self._drop_reasons),
             avg_hops=mean([p.hops for p in delivered]) if delivered else float("inf"),
             avg_latency=mean([p.latency for p in delivered]) if delivered else float("inf"),
             avg_queue_delay=mean([p.queue_delay for p in all_packets]) if all_packets else 0.0,

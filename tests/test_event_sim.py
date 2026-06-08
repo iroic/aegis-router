@@ -16,7 +16,7 @@ class EventDrivenSimulatorTests(unittest.TestCase):
         stats = sim.run(duration=3.0, traffic_rate=8.0)
 
         self.assertGreater(stats.generated, 0)
-        self.assertEqual(stats.generated, stats.delivered + stats.dropped)
+        self.assertEqual(stats.generated, stats.delivered + stats.dropped + stats.in_flight)
         self.assertGreaterEqual(stats.avg_queue_delay, 0.0)
         self.assertGreaterEqual(stats.drop_ratio, 0.0)
         self.assertLessEqual(stats.drop_ratio, 1.0)
