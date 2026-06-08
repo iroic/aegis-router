@@ -12,3 +12,4 @@ license = {text = "MIT"}
 
 [project.scripts]
 aegis-router-demo = "aegis_router.demo:main"
+aegis-router-event-demo = "aegis_router.event_demo:main"

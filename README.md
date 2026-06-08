@@ -12,12 +12,23 @@ Objectif: router des paquets chiffres entre noeuds sans utiliser de LLM lourd. L
 
 Ce premier jalon est volontairement sans dependances lourdes pour tourner immediatement sur le VPS. La branche suivante pourra ajouter PyTorch Geometric + RLlib pour le GNN-DQN complet.
 
-## Lancer la demo
+## Lancer la demo rapide
 
 ```bash
 cd /home/ghost/aegis-router
 python3 -m aegis_router.demo --nodes 80 --episodes 300 --packets 250 --sybil-ratio 0.15
 ```
+
+## Lancer la demo event-driven v0.3
+
+```bash
+cd /home/ghost/aegis-router
+python3 -m aegis_router.event_demo --nodes 80 --duration 8 --traffic-rate 12 --sybil-ratio 0.2
+```
+
+Cette simulation ajoute trafic Poisson, files d'attente, pertes stochastiques,
+TTL et paquets comme episodes asynchrones. Elle est inspiree des simulateurs
+MA-DRL/risk-aware routing trouves dans SatCom-TELMA et skypitcher.
 
 ## Lancer les tests
 
