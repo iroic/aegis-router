@@ -67,7 +67,15 @@ class RiskAwareHybridSolver:
         candidates = viable or neighbors
         return max(candidates, key=lambda nb: self._score(graph, packet, nb))
 
-    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool, touched_sybil: bool = False) -> None:
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+    ) -> None:
         old = self.peer_risk[neighbor] * self.reputation_decay
         signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
         self.peer_risk[neighbor] = max(0.0, min(1.0, old + signal))
@@ -103,8 +111,16 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     _recent_drops: list[bool] = field(default_factory=list)
     _recent_sybil: list[bool] = field(default_factory=list)
 
-    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool, touched_sybil: bool = False) -> None:
-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil)
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+    ) -> None:
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason)
         self._recent_drops.append(dropped)
         self._recent_sybil.append(touched_sybil)
         if len(self._recent_drops) > self.window_size:
@@ -125,11 +141,20 @@ class PeerScore:
     delivered: int = 0
     drops: int = 0
     sybil_touches: int = 0
+    link_losses: int = 0
+    loops: int = 0
+    ttl_expired: int = 0
 
     @property
     def badness(self) -> float:
         total = max(1, self.delivered + self.drops)
-        return (self.drops / total) + 0.7 * (self.sybil_touches / total)
+        return (
+            (self.drops / total)
+            + 0.7 * (self.sybil_touches / total)
+            + 0.35 * (self.link_losses / total)
+            + 0.5 * (self.loops / total)
+            + 0.25 * (self.ttl_expired / total)
+        )
 
 
 @dataclass
@@ -167,8 +192,16 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
         }
         self.state_path.write_text(json.dumps(data, indent=2, sort_keys=True))
 
-    def observe_result(self, *, neighbor: NodeId, delivered: bool, dropped: bool, touched_sybil: bool = False) -> None:
-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil)
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+    ) -> None:
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason)
         score = self.peer_scores[neighbor]
         if delivered:
             score.delivered += 1
@@ -176,6 +209,12 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
             score.drops += 1
         if touched_sybil:
             score.sybil_touches += 1
+        if reason == "link_loss":
+            score.link_losses += 1
+        elif reason == "loop":
+            score.loops += 1
+        elif reason == "ttl_expired":
+            score.ttl_expired += 1
         self.peer_risk[neighbor] = max(self.peer_risk[neighbor], score.badness)
 
     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:

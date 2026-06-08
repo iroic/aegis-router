@@ -99,7 +99,7 @@ class EventDrivenSimulator:
 
     def _drop(self, pkt: Packet, reason: str, *, notify: bool = True) -> None:
         if notify:
-            self._notify_solver(pkt, delivered=False, dropped=True)
+            self._notify_solver(pkt, delivered=False, dropped=True, reason=reason)
         self._drop_reasons[reason] += 1
         self._dropped.append(pkt)
 
@@ -159,11 +159,11 @@ class EventDrivenSimulator:
         pkt.ttl -= 1
         self._schedule(Event(start + service + metrics.latency, "arrive", pkt.packet_id))
 
-    def _notify_solver(self, pkt: Packet, *, delivered: bool, dropped: bool) -> None:
+    def _notify_solver(self, pkt: Packet, *, delivered: bool, dropped: bool, reason: str | None = None) -> None:
         observer = getattr(self.solver, "observe_result", None)
         neighbor = getattr(pkt, "last_neighbor", None)
         if observer is not None and neighbor is not None:
-            observer(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=pkt.touched_sybil)
+            observer(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=pkt.touched_sybil, reason=reason)
 
     def _stats(self) -> EventStats:
         all_packets = list(self._packets.values())
