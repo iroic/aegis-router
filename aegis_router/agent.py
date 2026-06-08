@@ -68,6 +68,82 @@ class QRoutingAgent:
         self.q[key] = (1 - self.alpha) * self.q[key] + self.alpha * (reward + self.gamma * future)
 
 
+class HybridRoutingScorer:
+    """v0.2 deterministic scorer for runtime routing.
+
+    It is intentionally tiny: no heavy ML dependency, no global topology, and no
+    payload metadata. It combines link quality, anonymous progress hint, TTL
+    pressure, and anti-loop penalty. The later DQN/GNN model can learn/replace
+    these weights while keeping the same interface.
+    """
+
+    def __init__(
+        self,
+        *,
+        latency_weight: float = 2.4,
+        loss_weight: float = 24.0,
+        bandwidth_weight: float = 0.35,
+        stability_weight: float = 1.5,
+        progress_weight: float = 4.0,
+        loop_penalty: float = 8.0,
+        low_ttl_penalty: float = 0.7,
+    ) -> None:
+        self.latency_weight = latency_weight
+        self.loss_weight = loss_weight
+        self.bandwidth_weight = bandwidth_weight
+        self.stability_weight = stability_weight
+        self.progress_weight = progress_weight
+        self.loop_penalty = loop_penalty
+        self.low_ttl_penalty = low_ttl_penalty
+
+    def choose(
+        self,
+        graph: P2PGraph,
+        *,
+        node: NodeId,
+        dst: NodeId,
+        visited: set[NodeId],
+        ttl_remaining: int,
+    ) -> NodeId | None:
+        neighbors = graph.neighbors(node)
+        if not neighbors:
+            return None
+        return max(
+            neighbors,
+            key=lambda nb: self.score(
+                graph,
+                node=node,
+                neighbor=nb,
+                dst=dst,
+                visited=visited,
+                ttl_remaining=ttl_remaining,
+            ),
+        )
+
+    def score(
+        self,
+        graph: P2PGraph,
+        *,
+        node: NodeId,
+        neighbor: NodeId,
+        dst: NodeId,
+        visited: set[NodeId],
+        ttl_remaining: int,
+    ) -> float:
+        m = graph.metrics(node, neighbor)
+        score = 0.0
+        score -= self.latency_weight * m.latency
+        score -= self.loss_weight * m.loss
+        score += self.bandwidth_weight * m.bandwidth
+        score += self.stability_weight * m.stability
+        score += self.progress_weight * _progress_delta(graph, node, neighbor, dst)
+        if neighbor in visited:
+            score -= self.loop_penalty
+        if ttl_remaining <= 4:
+            score -= self.low_ttl_penalty * (4 - ttl_remaining + 1)
+        return score
+
+
 def reward_for_link(metrics: LinkMetrics, *, delivered: bool, looped: bool = False) -> float:
     reward = 0.0
     reward -= 0.55  # hop budget pressure: avoid wandering routes
@@ -97,7 +173,13 @@ def _progress_prior(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> f
     In production this is replaced by an opaque route/session hint or rendezvous
     distance bucket, not by an IP or account identity.
     """
+    return 2.0 if _progress_delta(graph, node, nb, dst) > 0 else -1.2
+
+
+def _progress_delta(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> float:
     n = max(1, len(graph.adj))
     before = min(abs(dst - node), n - abs(dst - node))
     after = min(abs(dst - nb), n - abs(dst - nb))
-    return 2.0 if after < before else -1.2
+    if before == 0:
+        return 1.0
+    return (before - after) / before

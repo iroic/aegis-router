@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import random
 from statistics import mean
 
-from .agent import QRoutingAgent, reward_for_link
+from .agent import HybridRoutingScorer, QRoutingAgent, reward_for_link
 from .graph import NodeId, P2PGraph, generate_random_graph
 
 
@@ -47,6 +47,35 @@ def route_with_agent(graph: P2PGraph, agent: QRoutingAgent, src: NodeId, dst: No
             agent.update(graph, node, dst, nxt, reward, nxt)
         total_latency += m.latency
         # Approximate cumulative failure probability.
+        total_loss = 1.0 - ((1.0 - total_loss) * (1.0 - m.loss))
+        touched_sybil = touched_sybil or nxt in graph.sybil_nodes
+        node = nxt
+    return RouteResult(False, max_hops, total_latency, min(1.0, total_loss + 0.2), touched_sybil)
+
+
+def route_hybrid_scorer(
+    graph: P2PGraph,
+    scorer: HybridRoutingScorer,
+    src: NodeId,
+    dst: NodeId,
+    *,
+    max_hops: int = 32,
+) -> RouteResult:
+    node = src
+    total_latency = 0.0
+    total_loss = 0.0
+    touched_sybil = node in graph.sybil_nodes
+    visited: set[NodeId] = set()
+    for hop in range(max_hops):
+        if node == dst:
+            return RouteResult(True, hop, total_latency, total_loss, touched_sybil)
+        visited.add(node)
+        ttl_remaining = max_hops - hop
+        nxt = scorer.choose(graph, node=node, dst=dst, visited=visited, ttl_remaining=ttl_remaining)
+        if nxt is None:
+            return RouteResult(False, hop, total_latency, total_loss + 1.0, touched_sybil)
+        m = graph.metrics(node, nxt)
+        total_latency += m.latency
         total_loss = 1.0 - ((1.0 - total_loss) * (1.0 - m.loss))
         touched_sybil = touched_sybil or nxt in graph.sybil_nodes
         node = nxt
@@ -106,9 +135,11 @@ def evaluate(graph: P2PGraph, router, *, packets: int, seed: int | None = None) 
     )
 
 
-def run_experiment(*, nodes: int = 80, episodes: int = 300, packets: int = 250, sybil_ratio: float = 0.15, seed: int = 7) -> tuple[EvalStats, EvalStats]:
+def run_experiment(*, nodes: int = 80, episodes: int = 300, packets: int = 250, sybil_ratio: float = 0.15, seed: int = 7) -> tuple[EvalStats, EvalStats, EvalStats]:
     graph = generate_random_graph(nodes=nodes, degree=5, sybil_ratio=sybil_ratio, seed=seed)
     agent = train_agent(graph, episodes=episodes, seed=seed + 1)
+    hybrid_scorer = HybridRoutingScorer()
     shortest = evaluate(graph, lambda s, d: route_shortest_path(graph, s, d), packets=packets, seed=seed + 2)
     learned = evaluate(graph, lambda s, d: route_with_agent(graph, agent, s, d, train=False), packets=packets, seed=seed + 2)
-    return shortest, learned
+    hybrid = evaluate(graph, lambda s, d: route_hybrid_scorer(graph, hybrid_scorer, s, d), packets=packets, seed=seed + 2)
+    return shortest, learned, hybrid

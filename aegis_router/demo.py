@@ -24,7 +24,7 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=7)
     args = p.parse_args()
 
-    shortest, learned = run_experiment(
+    shortest, learned, hybrid = run_experiment(
         nodes=args.nodes,
         episodes=args.episodes,
         packets=args.packets,
@@ -35,6 +35,7 @@ def main() -> None:
     print(f"noeuds={args.nodes} episodes={args.episodes} paquets_eval={args.packets} sybil_ratio={args.sybil_ratio:.2f}")
     print("shortest-path :", fmt(shortest))
     print("agent Q-local :", fmt(learned))
+    print("hybrid v0.2   :", fmt(hybrid))
     print()
     print("Interpretation: plus le risque_perte et touch_sybil sont bas, plus le routage contourne les liens suspects.")
 
