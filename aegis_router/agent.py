@@ -70,15 +70,15 @@ class QRoutingAgent:
 
 def reward_for_link(metrics: LinkMetrics, *, delivered: bool, looped: bool = False) -> float:
     reward = 0.0
-    reward -= 0.25  # hop budget pressure: avoid wandering routes
-    reward -= metrics.latency
-    reward -= 10.0 * metrics.loss
-    reward += 0.4 * metrics.bandwidth
-    reward += 0.8 * metrics.stability
+    reward -= 0.55  # hop budget pressure: avoid wandering routes
+    reward -= 1.4 * metrics.latency
+    reward -= 14.0 * metrics.loss
+    reward += 0.35 * metrics.bandwidth
+    reward += 1.0 * metrics.stability
     if delivered:
-        reward += 12.0
+        reward += 22.0
     if looped:
-        reward -= 4.0
+        reward -= 8.0
     return reward
 
 
@@ -88,7 +88,7 @@ def _bucket(v: float) -> int:
 
 def _link_prior(m: LinkMetrics) -> float:
     # Prior avoids learning from zero with completely random behavior.
-    return -2.0 * m.latency - (10.0 * m.loss) + (0.35 * m.bandwidth) + (0.75 * m.stability)
+    return -2.4 * m.latency - (14.0 * m.loss) + (0.25 * m.bandwidth) + (1.0 * m.stability)
 
 
 def _progress_prior(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> float:
@@ -100,4 +100,4 @@ def _progress_prior(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> f
     n = max(1, len(graph.adj))
     before = min(abs(dst - node), n - abs(dst - node))
     after = min(abs(dst - nb), n - abs(dst - nb))
-    return 0.9 if after < before else -0.45
+    return 2.0 if after < before else -1.2
