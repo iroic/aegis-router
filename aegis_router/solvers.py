@@ -102,7 +102,7 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     the budget tightens. This keeps risk low without killing delivery.
     """
 
-    risk_budget: float = 0.35
+    risk_budget: float = 0.30
     min_budget: float = 0.15
     max_budget: float = 0.55
     adapt_step: float = 0.06
@@ -235,7 +235,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     peer can be bad from one route segment and still usable from another.
     """
 
-    edge_penalty: float = 0.6
+    edge_penalty: float = 0.7
     edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
 
     def load(self) -> None:

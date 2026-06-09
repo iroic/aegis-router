@@ -60,6 +60,10 @@ class EventDrivenSimulator:
         queue_service_time: float = 0.025,
         sybil_extra_drop: float = 0.12,
     ) -> None:
+        try:
+            from .postquantum_crypto import PostQuantumIdentity
+        except ImportError:
+            PostQuantumIdentity = None  # Fallback when post‑quantum libs are unavailable
         self.graph = graph
         self.solver = solver
         self.rng = random.Random(seed)
@@ -74,6 +78,12 @@ class EventDrivenSimulator:
         self._dropped: list[Packet] = []
         self._drop_reasons: Counter[str] = Counter()
         self._in_flight: list[Packet] = []
+        # Generate a single post‑quantum identity for the whole simulator (nodes share the same keys for demo purposes)
+        if PostQuantumIdentity is not None:
+            self._pq_identity = PostQuantumIdentity.generate()
+        else:
+            self._pq_identity = None  # PQ disabled
+
 
     def run(self, *, duration: float, traffic_rate: float, drain_time: float = 0.0) -> EventStats:
         end_time = duration + max(0.0, drain_time)

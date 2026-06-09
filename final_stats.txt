@@ -1,0 +1,1 @@
+learned #200  : generated= 306 | delivery= 54.6% | drop= 45.4% | inflight=  0 | hops= 5.69 | latency= 1.916 | queue= 0.002 | risk= 0.361 | sybil= 42.8%
