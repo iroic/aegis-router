@@ -26,6 +26,8 @@ for EP in "${EDGE_PENALTIES[@]}"; do
         --learn --learn-mode edge \
         --runs "${RUNS}" \
         --state "${STATE_FILE}" \
+        --edge-penalty "${EP}" \
+        --risk-budget "${RB}" \
         --nodes 100 --duration 15 --traffic-rate 20 \
         --sybil-ratio 0.2 --drain 10 2>/dev/null | tee /tmp/run.out
 
