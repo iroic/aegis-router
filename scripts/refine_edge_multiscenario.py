@@ -153,7 +153,37 @@ def scenario_score(row: dict[str, float]) -> int:
     return int(row["score"] > TARGET["score"]) + int(row["delivery"] > TARGET["delivery"]) + int(row["sybil"] < TARGET["sybil"]) + int(row["pps"] > TARGET["pps"])
 
 
-def evaluate_multiscenario(params: dict[str, Any], seed_offsets: list[int], scenarios: list[dict[str, Any]], workdir: str, stage: str) -> dict[str, Any]:
+def compute_robust_score(
+    *,
+    mean_score: float,
+    score_std: float,
+    min_score: float,
+    mean_delivery: float,
+    min_delivery: float,
+    mean_sybil: float,
+    max_sybil: float,
+    target_hits_mean: float,
+    objective: str,
+) -> float:
+    """Scalar objective for noisy multi-scenario routing search.
+
+    `balanced` keeps the original v1 objective. `sybil_stress` is a
+    worst-case/security-heavy variant inspired by robust optimization: it
+    rewards the worst scenario and explicitly penalizes high Sybil exposure.
+    `delivery_stress` keeps high-throughput/delivery specialists alive.
+    """
+    base = mean_score - 0.35 * score_std + 0.25 * min_score + 0.015 * target_hits_mean
+    if objective == "balanced":
+        return base
+    if objective == "sybil_stress":
+        sybil_excess = max(0.0, max_sybil - TARGET["sybil"])
+        return base + 0.16 * min_score + 0.08 * min_delivery - 0.55 * sybil_excess - 0.08 * mean_sybil
+    if objective == "delivery_stress":
+        return base + 0.18 * mean_delivery + 0.10 * min_delivery - 0.10 * max(0.0, max_sybil - 0.24)
+    raise ValueError(f"unknown objective: {objective}")
+
+
+def evaluate_multiscenario(params: dict[str, Any], seed_offsets: list[int], scenarios: list[dict[str, Any]], workdir: str, stage: str, objective: str) -> dict[str, Any]:
     per: list[dict[str, Any]] = []
     scores=[]; deliveries=[]; sybils=[]; ppss=[]; drops=[]; risks=[]; hits=[]
     for si, sc in enumerate(scenarios):
@@ -174,8 +204,18 @@ def evaluate_multiscenario(params: dict[str, Any], seed_offsets: list[int], scen
     mean_delivery, delivery_std = stats_mean(deliveries)
     mean_sybil, sybil_std = stats_mean(sybils)
     mean_pps, pps_std = stats_mean(ppss)
-    # Robust score: optimize mean, punish variance, punish worst scenario, add tiny bonus for universal target hits.
-    robust_score = mean_score - 0.35 * score_std + 0.25 * min(scores) + 0.015 * statistics.mean(hits)
+    target_hits_mean = statistics.mean(hits)
+    robust_score = compute_robust_score(
+        mean_score=mean_score,
+        score_std=score_std,
+        min_score=min(scores),
+        mean_delivery=mean_delivery,
+        min_delivery=min(deliveries),
+        mean_sybil=mean_sybil,
+        max_sybil=max(sybils),
+        target_hits_mean=target_hits_mean,
+        objective=objective,
+    )
     out: dict[str, Any] = {
         "candidate_id": params["candidate_id"],
         "parent": params.get("parent", "unknown"),
@@ -195,7 +235,7 @@ def evaluate_multiscenario(params: dict[str, Any], seed_offsets: list[int], scen
         "min_pps": min(ppss),
         "mean_drop": statistics.mean(drops),
         "mean_risk": statistics.mean(risks),
-        "target_hits_mean": statistics.mean(hits),
+        "target_hits_mean": target_hits_mean,
         "scenario_count": len(scenarios),
         "seed_count": len(seed_offsets),
         "params": json.dumps({k:v for k,v in params.items() if k not in {"candidate_id", "parent"}}, sort_keys=True),
@@ -217,6 +257,46 @@ def best_key(r: dict[str, Any]) -> tuple[float, float, float, float]:
     return (float(r["robust_score"]), float(r["min_score"]), -float(r["max_sybil"]), float(r["mean_delivery"]))
 
 
+def diverse_elite_ids(rows: list[dict[str, Any]], limit: int) -> list[int]:
+    """Quality-diversity style survivor selection.
+
+    Instead of forwarding only the single scalar objective, keep elites from
+    complementary niches: robust all-rounders, worst-case survivors, low-Sybil
+    profiles, delivery specialists, and high target-hit profiles. This is a
+    lightweight MAP-Elites approximation over existing CSV metrics.
+    """
+    selectors = [
+        lambda r: (float(r["robust_score"]), float(r["min_score"]), -float(r["max_sybil"])),
+        lambda r: (float(r["min_score"]), float(r["robust_score"]), -float(r["max_sybil"])),
+        lambda r: (-float(r["max_sybil"]), float(r["min_score"]), float(r["robust_score"])),
+        lambda r: (float(r["mean_delivery"]), float(r["min_delivery"]), -float(r["max_sybil"])),
+        lambda r: (float(r["target_hits_mean"]), float(r["robust_score"]), float(r["min_score"])),
+        lambda r: (float(r["mean_score"]), float(r["score_std"]) * -1.0, float(r["min_score"])),
+    ]
+    selected: list[int] = []
+    seen: set[int] = set()
+    quota = max(1, math.ceil(limit / len(selectors)))
+    for key in selectors:
+        for row in sorted(rows, key=key, reverse=True):
+            cid = int(row["candidate_id"])
+            if cid in seen:
+                continue
+            selected.append(cid)
+            seen.add(cid)
+            if len(selected) >= limit or len(selected) % quota == 0:
+                break
+        if len(selected) >= limit:
+            break
+    for row in sorted(rows, key=best_key, reverse=True):
+        cid = int(row["candidate_id"])
+        if cid not in seen:
+            selected.append(cid)
+            seen.add(cid)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base-profile", default="profiles/aegis-prod-edge-v1.json")
@@ -231,6 +311,8 @@ def main() -> None:
     ap.add_argument("--outdir", default="runs/refine_edge_global_v1")
     ap.add_argument("--seed", type=int, default=20260612)
     ap.add_argument("--scenario-limit", type=int, default=0, help="for smoke tests only")
+    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="balanced")
+    ap.add_argument("--selection", choices=["scalar", "diverse"], default="diverse")
     args = ap.parse_args()
     outdir=Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)
     state_dir=outdir/"states"; state_dir.mkdir(exist_ok=True)
@@ -241,12 +323,12 @@ def main() -> None:
     meta={"started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "target": TARGET, "args": vars(args), "scenarios": scenarios, "parent_count": len(parents), "candidate_count": len(candidates)}
     (outdir/"meta.json").write_text(json.dumps(meta, indent=2, sort_keys=True))
     print(f"REFINE_EDGE_GLOBAL start candidates={len(candidates)} scenarios={len(scenarios)} workers={args.workers}", flush=True)
-    print("robust_score = mean_score - 0.35*score_std + 0.25*min_score + 0.015*mean_target_hits", flush=True)
+    print(f"objective={args.objective} selection={args.selection}", flush=True)
     stage1_path=outdir/"stage1_results.csv"; stage2_path=outdir/"stage2_results.csv"; stage3_path=outdir/"stage3_results.csv"; best_path=outdir/"best.json"
     stage1_seeds=list(range(args.seed, args.seed+args.stage1_seeds))
     stage1=[]
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
-        futs=[ex.submit(evaluate_multiscenario, c, stage1_seeds, scenarios, str(state_dir), "stage1") for c in candidates]
+        futs=[ex.submit(evaluate_multiscenario, c, stage1_seeds, scenarios, str(state_dir), "stage1", args.objective) for c in candidates]
         for i,fut in enumerate(as_completed(futs), start=1):
             row=fut.result(); stage1.append(row); write_row(stage1_path,row)
             if i % 25 == 0 or float(row["target_hits_mean"]) >= 3.5:
@@ -255,24 +337,26 @@ def main() -> None:
                 print(f"stage1 {i}/{len(candidates)} best id={best['candidate_id']} robust={best['robust_score']:.4f} mean={best['mean_score']:.4f} min={best['min_score']:.4f} delivery={best['mean_delivery']:.4f} sybil={best['mean_sybil']:.4f}/{best['max_sybil']:.4f} pps={best['mean_pps']:.1f}", flush=True)
     s1=sorted(stage1, key=best_key, reverse=True)
     by_id={c["candidate_id"]:c for c in candidates}
-    top=[by_id[int(r["candidate_id"])] for r in s1[:args.top_k]]
+    top_ids = diverse_elite_ids(stage1, args.top_k) if args.selection == "diverse" else [int(r["candidate_id"]) for r in s1[:args.top_k]]
+    top=[by_id[i] for i in top_ids]
     print(f"STAGE2 validating top {len(top)} on {args.stage2_seeds} seeds x {len(scenarios)} scenarios", flush=True)
     stage2_seeds=list(range(args.seed+100000, args.seed+100000+args.stage2_seeds))
     stage2=[]
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
-        futs=[ex.submit(evaluate_multiscenario, c, stage2_seeds, scenarios, str(state_dir), "stage2") for c in top]
+        futs=[ex.submit(evaluate_multiscenario, c, stage2_seeds, scenarios, str(state_dir), "stage2", args.objective) for c in top]
         for i,fut in enumerate(as_completed(futs), start=1):
             row=fut.result(); stage2.append(row); write_row(stage2_path,row)
             best=max(stage2, key=best_key)
             best_path.write_text(json.dumps(best, indent=2, sort_keys=True))
             print(f"stage2 {i}/{len(top)} best id={best['candidate_id']} robust={best['robust_score']:.4f} mean={best['mean_score']:.4f} min={best['min_score']:.4f} delivery={best['mean_delivery']:.4f} sybil={best['mean_sybil']:.4f}/{best['max_sybil']:.4f} pps={best['mean_pps']:.1f}", flush=True)
     s2=sorted(stage2, key=best_key, reverse=True)
-    top3=[by_id[int(r["candidate_id"])] for r in s2[:args.final_k]]
+    final_ids = diverse_elite_ids(stage2, args.final_k) if args.selection == "diverse" else [int(r["candidate_id"]) for r in s2[:args.final_k]]
+    top3=[by_id[i] for i in final_ids]
     print(f"STAGE3 validating final {len(top3)} on {args.stage3_seeds} seeds x {len(scenarios)} scenarios", flush=True)
     stage3_seeds=list(range(args.seed+200000, args.seed+200000+args.stage3_seeds))
     stage3=[]
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
-        futs=[ex.submit(evaluate_multiscenario, c, stage3_seeds, scenarios, str(state_dir), "stage3") for c in top3]
+        futs=[ex.submit(evaluate_multiscenario, c, stage3_seeds, scenarios, str(state_dir), "stage3", args.objective) for c in top3]
         for i,fut in enumerate(as_completed(futs), start=1):
             row=fut.result(); stage3.append(row); write_row(stage3_path,row)
             best=max(stage3, key=best_key)
