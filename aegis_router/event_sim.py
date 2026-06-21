@@ -8,9 +8,13 @@ from collections import Counter
 from statistics import mean
 from typing import Callable
 
-from .graph import NodeId, P2PGraph
+from .graph import LinkMetrics, NodeId, P2PGraph
 from .packet import Packet
 from .solvers import RoutingSolver
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
 
 
 @dataclass(frozen=True)
@@ -59,17 +63,24 @@ class EventDrivenSimulator:
         ttl: int = 18,
         queue_service_time: float = 0.025,
         sybil_extra_drop: float = 0.12,
+        congestion_rate: float = 0.0,
+        congestion_jitter: float = 0.15,
+        churn_rate: float = 0.0,
+        churn_recovery: float = 0.4,
+        perturb_interval: float = 0.5,
     ) -> None:
-        try:
-            from .postquantum_crypto import PostQuantumIdentity
-        except ImportError:
-            PostQuantumIdentity = None  # Fallback when post‑quantum libs are unavailable
         self.graph = graph
         self.solver = solver
         self.rng = random.Random(seed)
         self.ttl = ttl
         self.queue_service_time = queue_service_time
         self.sybil_extra_drop = sybil_extra_drop
+        # Dynamic conditions (all default off → legacy static behaviour).
+        self.congestion_rate = congestion_rate    # fraction of edges perturbed per tick
+        self.congestion_jitter = congestion_jitter  # max absolute drift per perturbed metric
+        self.churn_rate = churn_rate               # P(up node goes down) per tick
+        self.churn_recovery = churn_recovery       # P(down node recovers) per tick
+        self.perturb_interval = perturb_interval   # seconds between perturbation ticks
         self._events: list[tuple[float, int, Event]] = []
         self._counter = itertools.count()
         self._packets: dict[int, Packet] = {}
@@ -78,16 +89,23 @@ class EventDrivenSimulator:
         self._dropped: list[Packet] = []
         self._drop_reasons: Counter[str] = Counter()
         self._in_flight: list[Packet] = []
-        # Generate a single post‑quantum identity for the whole simulator (nodes share the same keys for demo purposes)
-        if PostQuantumIdentity is not None:
-            self._pq_identity = PostQuantumIdentity.generate()
-        else:
-            self._pq_identity = None  # PQ disabled
+        self._down_nodes: set[NodeId] = set()
+        self._edges: list[tuple[NodeId, NodeId]] = [
+            (a, b) for a in self.graph.adj for b in self.graph.adj[a] if a < b
+        ]
+        # NOTE: post-quantum identities are NOT wired into routing yet. The
+        # postquantum_crypto module (per-packet ML-DSA-44 signatures, ML-KEM-768
+        # key exchange) currently stands alone as a verified PoC. Wiring per-node
+        # identities + verify-at-each-hop as a real Sybil gate is tracked work,
+        # not done here. Previously this constructor generated one shared keypair
+        # that was never used; that dead code is removed.
 
 
     def run(self, *, duration: float, traffic_rate: float, drain_time: float = 0.0) -> EventStats:
         end_time = duration + max(0.0, drain_time)
         self._schedule(Event(0.0, "generate"))
+        if self._dynamics_enabled() and self.perturb_interval > 0:
+            self._schedule(Event(self.perturb_interval, "perturb"))
         while self._events:
             time, _, event = heapq.heappop(self._events)
             if time > end_time:
@@ -97,6 +115,8 @@ class EventDrivenSimulator:
                     self._handle_generate(time, duration, traffic_rate)
             elif event.kind == "arrive" and event.packet_id is not None:
                 self._handle_arrive(time, event.packet_id)
+            elif event.kind == "perturb":
+                self._handle_perturb(time, end_time)
         # In-flight packets are tracked separately, not counted as hard drops.
         completed = {p.packet_id for p in self._delivered + self._dropped}
         for pkt in self._packets.values():
@@ -112,6 +132,37 @@ class EventDrivenSimulator:
             self._notify_solver(pkt, delivered=False, dropped=True, reason=reason)
         self._drop_reasons[reason] += 1
         self._dropped.append(pkt)
+
+    def _dynamics_enabled(self) -> bool:
+        return self.congestion_rate > 0.0 or self.churn_rate > 0.0
+
+    def _handle_perturb(self, time: float, end_time: float) -> None:
+        """Periodic network dynamics: congestion drift and node churn."""
+        if self.congestion_rate > 0.0 and self._edges:
+            k = max(1, int(self.congestion_rate * len(self._edges)))
+            for a, b in self.rng.sample(self._edges, min(k, len(self._edges))):
+                self._drift_edge(a, b)
+        if self.churn_rate > 0.0:
+            for node in self.graph.adj:
+                if node in self._down_nodes:
+                    if self.rng.random() < self.churn_recovery:
+                        self._down_nodes.discard(node)
+                elif self.rng.random() < self.churn_rate:
+                    self._down_nodes.add(node)
+        nxt = time + self.perturb_interval
+        if nxt <= end_time:
+            self._schedule(Event(nxt, "perturb"))
+
+    def _drift_edge(self, a: NodeId, b: NodeId) -> None:
+        m = self.graph.metrics(a, b)
+        j = self.congestion_jitter
+        drifted = LinkMetrics(
+            latency=_clamp(m.latency + self.rng.uniform(-j, j), 0.02, 1.5),
+            bandwidth=_clamp(m.bandwidth + self.rng.uniform(-j, j), 0.05, 1.0),
+            loss=_clamp(m.loss + self.rng.uniform(-j, j), 0.0, 0.7),
+            stability=_clamp(m.stability + self.rng.uniform(-j, j), 0.05, 1.0),
+        )
+        self.graph.add_edge(a, b, drifted)
 
     def _handle_generate(self, time: float, duration: float, traffic_rate: float) -> None:
         nodes = self.graph.nodes()
@@ -131,6 +182,11 @@ class EventDrivenSimulator:
             self._notify_solver(pkt, delivered=True, dropped=False)
             self._delivered.append(pkt)
             return
+        # The packet arrived at a node that has since churned offline. The hop
+        # that delivered us here is not to blame, so do not penalise it.
+        if pkt.node in self._down_nodes:
+            self._drop(pkt, "node_down", notify=False)
+            return
         if pkt.ttl <= 0:
             self._drop(pkt, "ttl_expired")
             return
@@ -142,6 +198,13 @@ class EventDrivenSimulator:
         nxt = self.solver.next_hop(self.graph, pkt)
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
             self._drop(pkt, "no_route")
+            return
+        # Chosen next hop is offline: the route is dead. Attribute it to the hop
+        # so reputation/edge learners can adapt to a flaky peer.
+        if nxt in self._down_nodes:
+            pkt.last_from = pkt.node
+            pkt.last_neighbor = nxt
+            self._drop(pkt, "node_down")
             return
         metrics = self.graph.metrics(pkt.node, nxt)
         extra_drop = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0

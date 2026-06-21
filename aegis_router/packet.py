@@ -19,7 +19,7 @@ class Packet:
     queue_delay: float = 0.0
     loss_risk: float = 0.0
     touched_sybil: bool = False
-    signature: str | None = None  # hex of SHA256 over immutable fields + secret
+    signature: str | None = None  # base64 ML-DSA-44 signature over immutable fields (see postquantum_crypto)
     last_from: NodeId | None = None
     last_neighbor: NodeId | None = None
 

@@ -95,8 +95,19 @@ def generate_random_graph(
     nodes: int,
     degree: int = 4,
     sybil_ratio: float = 0.1,
+    sybil_stealth: float = 0.0,
     seed: int | None = None,
 ) -> P2PGraph:
+    """Build a random P2P graph.
+
+    ``sybil_stealth`` in [0, 1] controls how well Sybil links disguise their
+    advertised metrics. At 0.0 (default, legacy behaviour) Sybil links look
+    obviously bad. At 1.0 they advertise metrics drawn from the honest ranges,
+    so a metric-only scorer cannot spot them — they betray only at runtime via
+    ``sybil_extra_drop``. This is the harder, more realistic adversary that
+    rewards behaviour-based learning (reputation/edge memory) over static
+    link scoring.
+    """
     rng = random.Random(seed)
     g = P2PGraph()
     sybil_count = int(nodes * sybil_ratio)
@@ -104,9 +115,11 @@ def generate_random_graph(
     for n in range(nodes):
         g.add_node(n, sybil=n in sybils)
 
+    stealth = max(0.0, min(1.0, sybil_stealth))
+
     # Ring for guaranteed connectivity.
     for n in range(nodes):
-        _add_random_edge(g, n, (n + 1) % nodes, rng)
+        _add_random_edge(g, n, (n + 1) % nodes, rng, stealth)
 
     # Random extra links until approximate degree is reached.
     target_edges = nodes * degree // 2
@@ -114,25 +127,38 @@ def generate_random_graph(
     while sum(len(v) for v in g.adj.values()) // 2 < target_edges and attempts < target_edges * 20:
         a, b = rng.sample(range(nodes), 2)
         if b not in g.adj[a]:
-            _add_random_edge(g, a, b, rng)
+            _add_random_edge(g, a, b, rng, stealth)
         attempts += 1
     return g
 
 
-def _add_random_edge(g: P2PGraph, a: NodeId, b: NodeId, rng: random.Random) -> None:
+# Advertised-metric bounds (min, max) for honest and obvious-Sybil links.
+_HONEST_BOUNDS = {
+    "latency": (0.03, 0.55),
+    "bandwidth": (0.45, 1.0),
+    "loss": (0.0, 0.12),
+    "stability": (0.55, 1.0),
+}
+_SYBIL_BOUNDS = {
+    "latency": (0.45, 1.0),
+    "bandwidth": (0.05, 0.45),
+    "loss": (0.12, 0.45),
+    "stability": (0.15, 0.65),
+}
+
+
+def _add_random_edge(g: P2PGraph, a: NodeId, b: NodeId, rng: random.Random, stealth: float = 0.0) -> None:
     sybil_edge = a in g.sybil_nodes or b in g.sybil_nodes
-    if sybil_edge:
-        metrics = LinkMetrics(
-            latency=rng.uniform(0.45, 1.0),
-            bandwidth=rng.uniform(0.05, 0.45),
-            loss=rng.uniform(0.12, 0.45),
-            stability=rng.uniform(0.15, 0.65),
-        )
-    else:
-        metrics = LinkMetrics(
-            latency=rng.uniform(0.03, 0.55),
-            bandwidth=rng.uniform(0.45, 1.0),
-            loss=rng.uniform(0.0, 0.12),
-            stability=rng.uniform(0.55, 1.0),
-        )
-    g.add_edge(a, b, metrics)
+    if not sybil_edge:
+        metrics = LinkMetrics(**{k: rng.uniform(*lo_hi) for k, lo_hi in _HONEST_BOUNDS.items()})
+        g.add_edge(a, b, metrics)
+        return
+    # Sybil link: blend its advertised bounds toward honest by `stealth`.
+    sampled = {}
+    for k in _SYBIL_BOUNDS:
+        s_lo, s_hi = _SYBIL_BOUNDS[k]
+        h_lo, h_hi = _HONEST_BOUNDS[k]
+        lo = s_lo * (1.0 - stealth) + h_lo * stealth
+        hi = s_hi * (1.0 - stealth) + h_hi * stealth
+        sampled[k] = rng.uniform(lo, hi)
+    g.add_edge(a, b, LinkMetrics(**sampled))

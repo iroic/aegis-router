@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
-from collections import defaultdict
+from collections import defaultdict, deque
 import json
 from pathlib import Path
 from typing import Protocol
@@ -109,8 +109,13 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     window_size: int = 10
     drop_threshold: float = 0.35
     sybil_threshold: float = 0.5
-    _recent_drops: list[bool] = field(default_factory=list)
-    _recent_sybil: list[bool] = field(default_factory=list)
+    _recent_drops: deque[bool] = field(default_factory=deque)
+    _recent_sybil: deque[bool] = field(default_factory=deque)
+
+    def __post_init__(self) -> None:
+        # Bounded windows: append auto-evicts the oldest in O(1), no list.pop(0).
+        self._recent_drops = deque(self._recent_drops, maxlen=self.window_size)
+        self._recent_sybil = deque(self._recent_sybil, maxlen=self.window_size)
 
     def observe_result(
         self,
@@ -125,9 +130,6 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
         super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
         self._recent_drops.append(dropped)
         self._recent_sybil.append(touched_sybil)
-        if len(self._recent_drops) > self.window_size:
-            self._recent_drops.pop(0)
-            self._recent_sybil.pop(0)
         if len(self._recent_drops) < self.window_size:
             return
         drop_rate = sum(self._recent_drops) / self.window_size
@@ -172,6 +174,7 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
     peer_scores: defaultdict[NodeId, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         self.state_path = Path(self.state_path)
         self.load()
 
