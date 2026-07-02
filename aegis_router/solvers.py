@@ -395,7 +395,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
         assert packet.node is not None
         edge_badness = self.edge_scores[(packet.node, nb)].badness
-        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness))
+        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
 
 
 @dataclass
