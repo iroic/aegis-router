@@ -240,6 +240,100 @@ class EdgeLearningSolver(PersistentLearningSolver):
 
     edge_penalty: float = 0.7
     edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+    # Parameters for reputation-based path routing
+    NODE_RISK_THRESHOLD: float = 0.5
+    EDGE_BADNESS_THRESHOLD: float = 0.5
+    
+    def find_trusted_path(self, graph: P2PGraph, packet: Packet) -> list[NodeId] | None:
+        """
+        Build 2-3 hop paths using reputation scores to avoid high-risk nodes.
+        Prioritizes paths that avoid nodes with high sybil_touch history.
+        """
+        if packet.node is None or packet.ttl < 2:
+            return None
+        
+        current = packet.node
+        dest = packet.dst
+        
+        # Directly return destination if it's a neighbor
+        if graph.has_edge(current, dest):
+            return [current, dest]
+        
+        # Find trusted intermediaries using reputation scores
+        candidates = []
+        
+        # 2-hop paths
+        for n1 in graph.neighbors(current):
+            if (n1 in packet.visited or 
+                self.peer_risk[n1] > self.NODE_RISK_THRESHOLD or 
+                not graph.has_edge(n1, dest)):
+                continue
+                
+            # Check if we have reputation data for both edges
+            edge1 = (current, n1)
+            edge2 = (n1, dest)
+            
+            if edge1 not in self.edge_scores or edge2 not in self.edge_scores:
+                continue
+                
+            if (self.edge_scores[edge1].badness > self.EDGE_BADNESS_THRESHOLD or
+                self.edge_scores[edge2].badness > self.EDGE_BADNESS_THRESHOLD or
+                self.peer_scores[n1].sybil_touches > self.NODE_RISK_THRESHOLD):
+                continue
+            
+            candidates.append([current, n1, dest])
+        
+        # 3-hop paths
+        for n1 in graph.neighbors(current):
+            if (n1 in packet.visited or 
+                self.peer_risk[n1] > self.NODE_RISK_THRESHOLD):
+                continue
+                
+            edge1 = (current, n1)
+            
+            for n2 in graph.neighbors(n1):
+                if (n2 == current or n2 in packet.visited or 
+                    self.peer_risk[n2] > self.NODE_RISK_THRESHOLD or 
+                    not graph.has_edge(n2, dest)):
+                    continue
+                
+                edge2 = (n1, n2)
+                edge3 = (n2, dest)
+                
+                if any(edge not in self.edge_scores for edge in (edge1, edge2, edge3)):
+                    continue
+                    
+                if any(self.edge_scores[edge].badness > self.EDGE_BADNESS_THRESHOLD for edge in (edge1, edge2, edge3)):
+                    continue
+                    
+                if (self.peer_scores[n1].sybil_touches > self.NODE_RISK_THRESHOLD or 
+                    self.peer_scores[n2].sybil_touches > self.NODE_RISK_THRESHOLD):
+                    continue
+                    
+                candidates.append([current, n1, n2, dest])
+        
+        # Select best candidate path (if any)
+        if not candidates:
+            return None
+        
+        # Prioritize shorter paths and those with lower risk
+        return min(candidates, key=len)
+
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        """
+        Overridden to use multi-hop trusted paths when available.
+        Prioritizes trusted paths over direct routing when possible.
+        """
+        assert packet.node is not None
+        
+        # Try to find a trusted multi-hop path
+        if trusted_path := self.find_trusted_path(graph, packet):
+            # Skip current node and return the first hop
+            if len(trusted_path) >= 2 and trusted_path[0] == packet.node:
+                return trusted_path[1]
+        
+        # Fall back to direct routing
+        return super().next_hop(graph, packet)
 
     def load(self) -> None:
         if not Path(self.state_path).exists():
@@ -301,7 +395,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
         assert packet.node is not None
         edge_badness = self.edge_scores[(packet.node, nb)].badness
-        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
+        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness))
 
 
 @dataclass
