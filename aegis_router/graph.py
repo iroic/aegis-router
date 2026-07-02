@@ -29,6 +29,10 @@ class P2PGraph:
         self.adj.setdefault(node, {})
         if sybil:
             self.sybil_nodes.add(node)
+            
+    def has_edge(self, a: NodeId, b: NodeId) -> bool:
+        """Check if an edge exists between two nodes."""
+        return a in self.adj and b in self.adj[a]
 
     def add_edge(self, a: NodeId, b: NodeId, metrics: LinkMetrics) -> None:
         self.add_node(a)
