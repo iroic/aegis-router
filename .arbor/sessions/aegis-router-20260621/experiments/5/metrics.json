@@ -1,0 +1,8 @@
+{
+  "node_id": "5",
+  "hypothesis": "Mechanism: Path-level eligibility traces for delayed routing feedback\nHypothesis: distribute terminal delivery, drop, loop, and Sybil feedback backward across the actual packet path with decaying eligibility so earlier deceptive edges receive causal credit instead of blaming only the final hop.\nObservable: higher B_dev robust_score with lower Sybil exposure and fewer repeated bad-route failures, especially on sparse scenarios.\nConflicts: pruned [3] found last-hop pheromone credit did not generalize; this counters it by assigning delayed outcomes across the full traversed path.",
+  "score": 0.6816484915899128,
+  "insight": "Le crédit sur chemin complet fonctionne mais attribue trop largement le signal terminal; il réduit légèrement Sybil au prix de livraison. Une attribution conditionnelle par cause serait nécessaire.",
+  "result": "B_dev 0.681648, inférieur au trunk 0.684530; B_test non exécuté.",
+  "branch": null
+}

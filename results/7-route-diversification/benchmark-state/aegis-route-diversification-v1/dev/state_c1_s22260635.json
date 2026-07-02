@@ -1,0 +1,3552 @@
+{
+  "edge_usage": {
+    "0->1": 1.597061829528775,
+    "0->45": 0.08403807398482381,
+    "0->64": 0.9971804312757898,
+    "0->79": 0.7699434672940492,
+    "1->0": 2.345716865529426,
+    "1->2": 0.4608513137259754,
+    "1->33": 0.10236627123482996,
+    "1->37": 0.847629063318988,
+    "10->11": 0.0010311972937756483,
+    "10->15": 1.222396982786715,
+    "10->34": 2.12049559820351,
+    "10->68": 0.1505356862532028,
+    "10->78": 0.013213807290335711,
+    "10->9": 2.0796167948131044,
+    "11->10": 0.23467939140194322,
+    "12->14": 2.24445835393215,
+    "12->6": 0.7631069370094543,
+    "12->78": 0.8613661772479301,
+    "13->14": 0.004808417285946982,
+    "13->48": 0.12818760145201663,
+    "13->8": 0.07036787905652458,
+    "14->12": 1.5396576553603492,
+    "14->15": 0.27773797371621295,
+    "14->28": 1.5780435202823355,
+    "14->7": 0.1987579488687028,
+    "15->10": 0.7076756961599868,
+    "15->14": 0.10687642898565071,
+    "15->16": 1.9349967691111511,
+    "15->26": 0.016476332302805687,
+    "16->15": 1.2161016472363075,
+    "16->17": 0.9501539504894501,
+    "17->16": 1.2982803024317329,
+    "17->18": 0.9906949490324521,
+    "18->17": 3.1855329411777973,
+    "18->19": 0.6660865372935179,
+    "18->23": 1.561560007993659,
+    "18->79": 5.574145878641982e-05,
+    "19->18": 0.6939266188235443,
+    "19->20": 0.702015778906707,
+    "19->34": 1.0,
+    "2->1": 0.08125670819499695,
+    "2->4": 0.573033716131505,
+    "2->5": 0.0012119798771092589,
+    "2->62": 0.6254149137396323,
+    "2->73": 4.440463723825572e-05,
+    "2->8": 0.3327069712753448,
+    "20->19": 1.6010009106753322,
+    "20->21": 0.7444763931228374,
+    "21->20": 1.5953432581941849,
+    "21->22": 0.6005820829730266,
+    "22->21": 0.9883439763242341,
+    "22->23": 3.270437416510442,
+    "22->28": 3.118980824605413,
+    "22->6": 0.00900753705438638,
+    "22->63": 1.030929649347349,
+    "22->78": 1.2933388115975972,
+    "23->18": 2.786240351303871,
+    "23->22": 4.472978718589979,
+    "23->24": 1.9044622350196396,
+    "24->23": 4.553326709545786,
+    "24->26": 0.6922900899536245,
+    "24->69": 2.569039021564652,
+    "25->24": 0.2682093094223701,
+    "25->26": 4.101007609074171,
+    "25->44": 1.8352078420837026,
+    "26->15": 1.5965398724123065e-05,
+    "26->24": 3.6072448408990967,
+    "26->25": 1.149921470387208,
+    "26->27": 1.7916462519533416e-06,
+    "26->51": 0.9129581691474218,
+    "27->26": 5.1648757433782155e-06,
+    "27->28": 1.0259399552204929,
+    "27->29": 4.836181494671945,
+    "27->52": 5.35106277627775e-05,
+    "28->22": 1.1778712121423278,
+    "28->27": 3.829382945938453,
+    "28->29": 0.543217527564116,
+    "28->75": 3.121946384895513e-05,
+    "29->27": 0.6420807074802135,
+    "29->28": 0.034560284509863745,
+    "29->30": 3.5383007303518452,
+    "29->40": 2.518022333863726,
+    "29->69": 1.1459919129275271,
+    "3->2": 0.03143782485985429,
+    "3->22": 8.944715050181764e-06,
+    "3->4": 5.264866915685648e-06,
+    "3->73": 0.002515680448195516,
+    "30->29": 0.9016565021806746,
+    "30->31": 3.8885636336148317,
+    "30->53": 0.0019026960018824644,
+    "31->30": 4.130266813377409,
+    "31->32": 0.9207020403514402,
+    "31->79": 0.12421041803848581,
+    "32->31": 0.0003151863755929665,
+    "32->33": 0.5648737957745472,
+    "32->61": 0.01665130522779663,
+    "33->1": 0.750720453516657,
+    "33->22": 0.8988042820842554,
+    "33->32": 0.5315050346255701,
+    "33->34": 0.005057926461517157,
+    "34->10": 0.2572409784149848,
+    "34->19": 0.27021547337258756,
+    "34->33": 0.3561061719689201,
+    "34->35": 1.0629275184835627,
+    "34->69": 0.02618969097351694,
+    "35->34": 0.566530917470291,
+    "35->36": 1.0720511893003526,
+    "36->0": 0.05417300933573534,
+    "36->35": 0.2975514592770481,
+    "36->37": 1.308274275606221,
+    "37->1": 0.8147037275634743,
+    "37->36": 0.02417504017367205,
+    "37->72": 0.9400337837189646,
+    "38->37": 0.07989130085589721,
+    "38->39": 5.567947445834252e-05,
+    "39->16": 0.0016436886835694922,
+    "39->40": 0.4634715599298642,
+    "39->63": 0.4823654935423101,
+    "4->2": 0.002584865822905589,
+    "4->5": 0.6889450618129076,
+    "40->29": 0.467902433511145,
+    "40->41": 5.282764908632924,
+    "40->46": 1.424077361112096,
+    "40->63": 0.28655024344074703,
+    "41->27": 0.13234632723203035,
+    "41->40": 0.0986817399897827,
+    "41->42": 4.548520755095478,
+    "41->61": 0.833633941831765,
+    "42->41": 1.8571011034256468,
+    "42->48": 6.1000073331411935,
+    "42->69": 0.037925711215639785,
+    "43->44": 0.12689826348509992,
+    "44->25": 3.9283141342263748,
+    "44->43": 1.3429022360343137e-06,
+    "44->45": 3.7049408107583104,
+    "44->71": 0.615564058824784,
+    "45->0": 0.009318792182816555,
+    "45->30": 0.041888833076587126,
+    "45->44": 3.3589794404456303,
+    "45->46": 3.9037680919450026,
+    "45->55": 0.21827973365852013,
+    "46->40": 2.220562433853406,
+    "46->45": 3.4102019799749232,
+    "46->47": 3.8990994322040695,
+    "46->8": 0.2843457997657623,
+    "47->46": 6.231249333684529,
+    "47->48": 3.8398154293204363,
+    "47->77": 0.9192992784614272,
+    "48->42": 0.06816748542223713,
+    "48->47": 6.944595525289205,
+    "48->49": 1.370472265095557,
+    "49->48": 1.4905831676992347,
+    "49->50": 0.7524095830406433,
+    "5->2": 0.014696405257595002,
+    "5->4": 0.003752235416945525,
+    "5->6": 0.7039870582049355,
+    "50->49": 1.6510623797091026,
+    "50->51": 0.5625150157589524,
+    "51->26": 0.10900390836437135,
+    "51->50": 1.37083808047262,
+    "51->52": 1.73423380235722,
+    "52->27": 0.39502030687446926,
+    "52->51": 1.327036066454762,
+    "52->56": 2.945188324199355,
+    "52->6": 0.07880445217198936,
+    "53->30": 0.03711151529020348,
+    "53->52": 1.8204136048436008,
+    "53->54": 0.47880014974545887,
+    "54->53": 1.7860899942869106,
+    "54->55": 0.5273390890430778,
+    "55->45": 0.011833044294899155,
+    "55->54": 1.5374031781754804,
+    "55->56": 0.000692577666564163,
+    "55->73": 0.49509862999895626,
+    "56->52": 1.0095496323163435,
+    "56->55": 0.8802747553903512,
+    "56->57": 3.7600926193382196,
+    "57->56": 1.6766711434442563,
+    "57->58": 4.360507936464385,
+    "58->57": 2.392272495165129,
+    "58->59": 3.185498044937302,
+    "59->58": 3.057147301055091,
+    "59->60": 2.1539085291338615,
+    "59->68": 0.9315769313034732,
+    "6->12": 0.3048295860943571,
+    "6->22": 0.04063638523043451,
+    "6->52": 0.15083490387141749,
+    "6->7": 1.9142118192763902,
+    "6->76": 0.4522253064993738,
+    "60->59": 2.4062609022545938,
+    "60->61": 2.255054932712387,
+    "60->8": 1.4324765725879534,
+    "61->60": 3.5571770504537343,
+    "61->62": 2.318400145358712,
+    "62->2": 0.4307980978013336,
+    "62->61": 1.8914811393157085,
+    "62->63": 2.091728375118692,
+    "63->22": 0.33485445123858115,
+    "63->40": 1.326797727219393,
+    "63->62": 0.8857306057660025,
+    "63->64": 1.6187573143051597,
+    "63->75": 0.3723819714362474,
+    "64->0": 0.1838589536323414,
+    "64->45": 0.0011501377423071702,
+    "64->63": 0.03495432434242785,
+    "64->65": 2.852348682786096,
+    "64->8": 0.1684374162107943,
+    "65->64": 1.3748935811840222,
+    "65->66": 2.529325968234402,
+    "66->65": 1.9371800807778163,
+    "66->67": 2.683039913456224,
+    "67->66": 2.4380537061288434,
+    "67->68": 1.1898922547883881,
+    "68->10": 0.7315390698300733,
+    "68->67": 2.867089773346596,
+    "68->69": 2.967201511321385,
+    "69->24": 1.8308099604403505,
+    "69->42": 1.5448812156357041,
+    "69->68": 2.9227715551156703,
+    "69->70": 2.5017240099495637,
+    "7->14": 1.3894207057472026,
+    "7->6": 0.5657897555072884,
+    "7->78": 0.8489505204805222,
+    "7->8": 0.7802709283946855,
+    "70->69": 0.8519044792524354,
+    "70->71": 2.4770025588328597,
+    "71->44": 1.6476008932235775,
+    "71->70": 0.7024160513949546,
+    "71->72": 2.306796612612751,
+    "72->71": 1.7571227292106797,
+    "72->73": 1.836093643577338,
+    "73->2": 0.0051493390592054255,
+    "73->55": 1.1534483136752356,
+    "73->72": 1.8164100360201603,
+    "74->75": 0.3308806157009843,
+    "75->28": 0.4649915916570949,
+    "75->63": 2.173317089083685,
+    "75->74": 1.676151648438486e-06,
+    "75->76": 0.6180290270854166,
+    "75->9": 0.14956517346758688,
+    "76->6": 0.22118988034837725,
+    "76->75": 1.8670978339150472,
+    "76->77": 0.7394555090551158,
+    "77->47": 0.004822111667187936,
+    "77->76": 2.1331379217204884,
+    "77->78": 0.8476468454678946,
+    "78->12": 1.4866548304585105,
+    "78->22": 1.0470884528048034,
+    "78->77": 0.7188016516548097,
+    "78->79": 1.5261764724419178,
+    "79->0": 1.6989805332958037,
+    "79->18": 0.6185918772926075,
+    "79->31": 0.0752699074385195,
+    "79->78": 0.984259382156979,
+    "8->2": 1.6426268963686552,
+    "8->60": 0.3320964216950665,
+    "8->64": 0.1699378898684465,
+    "8->7": 0.930524616597426,
+    "8->9": 2.6308737970576535,
+    "9->10": 2.6381707728166277,
+    "9->75": 0.510740462869445,
+    "9->8": 2.6119814323136583
+  },
+  "edges": {
+    "0->1": {
+      "delivered": 12,
+      "drops": 15,
+      "link_losses": 8,
+      "loops": 7,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "0->36": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "0->45": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "0->64": {
+      "delivered": 2,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "0->79": {
+      "delivered": 16,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "1->0": {
+      "delivered": 12,
+      "drops": 30,
+      "link_losses": 7,
+      "loops": 23,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "1->2": {
+      "delivered": 6,
+      "drops": 10,
+      "link_losses": 9,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "1->33": {
+      "delivered": 1,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "1->37": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "10->11": {
+      "delivered": 15,
+      "drops": 11,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 26,
+      "ttl_expired": 0
+    },
+    "10->14": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "10->15": {
+      "delivered": 20,
+      "drops": 17,
+      "link_losses": 17,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "10->34": {
+      "delivered": 3,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "10->68": {
+      "delivered": 4,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "10->78": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "10->9": {
+      "delivered": 5,
+      "drops": 6,
+      "link_losses": 2,
+      "loops": 4,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "11->10": {
+      "delivered": 0,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 10,
+      "ttl_expired": 0
+    },
+    "11->12": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "11->18": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->11": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->13": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "12->14": {
+      "delivered": 5,
+      "drops": 48,
+      "link_losses": 2,
+      "loops": 46,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "12->6": {
+      "delivered": 7,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "12->75": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->78": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "13->12": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "13->14": {
+      "delivered": 0,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "13->48": {
+      "delivered": 0,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 9,
+      "ttl_expired": 0
+    },
+    "13->8": {
+      "delivered": 0,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "14->10": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "14->12": {
+      "delivered": 30,
+      "drops": 7,
+      "link_losses": 0,
+      "loops": 7,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "14->13": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "14->15": {
+      "delivered": 12,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "14->28": {
+      "delivered": 5,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "14->7": {
+      "delivered": 3,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "15->10": {
+      "delivered": 6,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "15->14": {
+      "delivered": 28,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "15->16": {
+      "delivered": 22,
+      "drops": 11,
+      "link_losses": 11,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "15->26": {
+      "delivered": 0,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "15->3": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "16->15": {
+      "delivered": 15,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "16->17": {
+      "delivered": 22,
+      "drops": 4,
+      "link_losses": 2,
+      "loops": 2,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "16->39": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "17->16": {
+      "delivered": 32,
+      "drops": 18,
+      "link_losses": 2,
+      "loops": 16,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "17->18": {
+      "delivered": 10,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "18->11": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "18->17": {
+      "delivered": 25,
+      "drops": 10,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "18->19": {
+      "delivered": 41,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "18->22": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "18->23": {
+      "delivered": 6,
+      "drops": 2,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "18->40": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "18->79": {
+      "delivered": 2,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "19->18": {
+      "delivered": 2,
+      "drops": 5,
+      "link_losses": 2,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 2
+    },
+    "19->20": {
+      "delivered": 21,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "19->34": {
+      "delivered": 3,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "2->1": {
+      "delivered": 36,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "2->3": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "2->4": {
+      "delivered": 46,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "2->41": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "2->5": {
+      "delivered": 4,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "2->62": {
+      "delivered": 2,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "2->73": {
+      "delivered": 12,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "2->8": {
+      "delivered": 4,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "20->19": {
+      "delivered": 4,
+      "drops": 6,
+      "link_losses": 5,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "20->21": {
+      "delivered": 3,
+      "drops": 12,
+      "link_losses": 10,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "21->20": {
+      "delivered": 21,
+      "drops": 30,
+      "link_losses": 5,
+      "loops": 25,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "21->22": {
+      "delivered": 4,
+      "drops": 16,
+      "link_losses": 10,
+      "loops": 6,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "22->18": {
+      "delivered": 5,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "22->21": {
+      "delivered": 41,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "22->23": {
+      "delivered": 24,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "22->28": {
+      "delivered": 14,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "22->3": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "22->33": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "22->6": {
+      "delivered": 1,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "22->63": {
+      "delivered": 3,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "22->78": {
+      "delivered": 0,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "23->18": {
+      "delivered": 5,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "23->22": {
+      "delivered": 23,
+      "drops": 5,
+      "link_losses": 4,
+      "loops": 1,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "23->24": {
+      "delivered": 27,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "24->23": {
+      "delivered": 26,
+      "drops": 15,
+      "link_losses": 14,
+      "loops": 1,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "24->25": {
+      "delivered": 23,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "24->26": {
+      "delivered": 11,
+      "drops": 6,
+      "link_losses": 6,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "24->69": {
+      "delivered": 1,
+      "drops": 1,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "25->24": {
+      "delivered": 6,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "25->26": {
+      "delivered": 6,
+      "drops": 13,
+      "link_losses": 1,
+      "loops": 12,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "25->44": {
+      "delivered": 5,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "26->15": {
+      "delivered": 1,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "26->24": {
+      "delivered": 1,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "26->25": {
+      "delivered": 10,
+      "drops": 6,
+      "link_losses": 1,
+      "loops": 5,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "26->27": {
+      "delivered": 14,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "26->51": {
+      "delivered": 0,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "27->26": {
+      "delivered": 16,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "27->28": {
+      "delivered": 11,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "27->29": {
+      "delivered": 8,
+      "drops": 6,
+      "link_losses": 6,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "27->41": {
+      "delivered": 7,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "27->52": {
+      "delivered": 7,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "28->14": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "28->22": {
+      "delivered": 13,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "28->27": {
+      "delivered": 28,
+      "drops": 11,
+      "link_losses": 5,
+      "loops": 6,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "28->29": {
+      "delivered": 30,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "28->75": {
+      "delivered": 5,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "29->27": {
+      "delivered": 4,
+      "drops": 9,
+      "link_losses": 6,
+      "loops": 3,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "29->28": {
+      "delivered": 4,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "29->30": {
+      "delivered": 24,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "29->40": {
+      "delivered": 7,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "29->69": {
+      "delivered": 3,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "3->15": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "3->2": {
+      "delivered": 0,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "3->22": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "3->4": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "3->44": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "3->73": {
+      "delivered": 0,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "30->29": {
+      "delivered": 3,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "30->31": {
+      "delivered": 26,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "30->45": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "30->53": {
+      "delivered": 1,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "31->30": {
+      "delivered": 7,
+      "drops": 67,
+      "link_losses": 10,
+      "loops": 57,
+      "sybil_touches": 9,
+      "ttl_expired": 0
+    },
+    "31->32": {
+      "delivered": 14,
+      "drops": 20,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 34,
+      "ttl_expired": 0
+    },
+    "31->79": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "32->31": {
+      "delivered": 6,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "32->33": {
+      "delivered": 4,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "32->61": {
+      "delivered": 0,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "33->1": {
+      "delivered": 0,
+      "drops": 7,
+      "link_losses": 6,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "33->22": {
+      "delivered": 4,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "33->32": {
+      "delivered": 5,
+      "drops": 2,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "33->34": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 2,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "34->10": {
+      "delivered": 0,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "34->19": {
+      "delivered": 1,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "34->33": {
+      "delivered": 9,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "34->35": {
+      "delivered": 6,
+      "drops": 5,
+      "link_losses": 2,
+      "loops": 3,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "34->69": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "35->34": {
+      "delivered": 3,
+      "drops": 15,
+      "link_losses": 5,
+      "loops": 10,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "35->36": {
+      "delivered": 5,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "36->0": {
+      "delivered": 0,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "36->35": {
+      "delivered": 4,
+      "drops": 6,
+      "link_losses": 5,
+      "loops": 1,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "36->37": {
+      "delivered": 9,
+      "drops": 8,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 1
+    },
+    "37->1": {
+      "delivered": 2,
+      "drops": 2,
+      "link_losses": 1,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "37->36": {
+      "delivered": 0,
+      "drops": 27,
+      "link_losses": 7,
+      "loops": 20,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "37->38": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "37->72": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "38->37": {
+      "delivered": 0,
+      "drops": 16,
+      "link_losses": 16,
+      "loops": 0,
+      "sybil_touches": 16,
+      "ttl_expired": 0
+    },
+    "38->39": {
+      "delivered": 0,
+      "drops": 6,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "39->16": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "39->38": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "39->40": {
+      "delivered": 0,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "39->42": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "39->60": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "39->63": {
+      "delivered": 0,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "4->2": {
+      "delivered": 1,
+      "drops": 12,
+      "link_losses": 2,
+      "loops": 10,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "4->3": {
+      "delivered": 2,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "4->5": {
+      "delivered": 1,
+      "drops": 19,
+      "link_losses": 6,
+      "loops": 13,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "40->18": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "40->29": {
+      "delivered": 0,
+      "drops": 3,
+      "link_losses": 1,
+      "loops": 2,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "40->39": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "40->41": {
+      "delivered": 21,
+      "drops": 30,
+      "link_losses": 4,
+      "loops": 25,
+      "sybil_touches": 4,
+      "ttl_expired": 1
+    },
+    "40->46": {
+      "delivered": 14,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "40->63": {
+      "delivered": 2,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "41->2": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "41->27": {
+      "delivered": 1,
+      "drops": 2,
+      "link_losses": 0,
+      "loops": 2,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "41->40": {
+      "delivered": 8,
+      "drops": 11,
+      "link_losses": 3,
+      "loops": 8,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "41->42": {
+      "delivered": 18,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "41->61": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "42->39": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "42->41": {
+      "delivered": 6,
+      "drops": 54,
+      "link_losses": 7,
+      "loops": 47,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "42->43": {
+      "delivered": 3,
+      "drops": 2,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "42->48": {
+      "delivered": 7,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "42->69": {
+      "delivered": 2,
+      "drops": 1,
+      "link_losses": 0,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "43->42": {
+      "delivered": 0,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "43->44": {
+      "delivered": 2,
+      "drops": 6,
+      "link_losses": 6,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "44->25": {
+      "delivered": 5,
+      "drops": 8,
+      "link_losses": 2,
+      "loops": 6,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "44->3": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "44->43": {
+      "delivered": 12,
+      "drops": 8,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 20,
+      "ttl_expired": 0
+    },
+    "44->45": {
+      "delivered": 9,
+      "drops": 39,
+      "link_losses": 8,
+      "loops": 31,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "44->71": {
+      "delivered": 3,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "45->0": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "45->30": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "45->44": {
+      "delivered": 35,
+      "drops": 8,
+      "link_losses": 2,
+      "loops": 6,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "45->46": {
+      "delivered": 10,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "45->55": {
+      "delivered": 18,
+      "drops": 6,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "45->64": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "46->40": {
+      "delivered": 14,
+      "drops": 12,
+      "link_losses": 8,
+      "loops": 4,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "46->45": {
+      "delivered": 34,
+      "drops": 4,
+      "link_losses": 1,
+      "loops": 3,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "46->47": {
+      "delivered": 22,
+      "drops": 11,
+      "link_losses": 9,
+      "loops": 2,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "46->8": {
+      "delivered": 2,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "47->46": {
+      "delivered": 21,
+      "drops": 28,
+      "link_losses": 20,
+      "loops": 8,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "47->48": {
+      "delivered": 22,
+      "drops": 3,
+      "link_losses": 1,
+      "loops": 2,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "47->77": {
+      "delivered": 4,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "48->13": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "48->42": {
+      "delivered": 2,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "48->47": {
+      "delivered": 15,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "48->49": {
+      "delivered": 23,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "49->48": {
+      "delivered": 8,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "49->50": {
+      "delivered": 12,
+      "drops": 8,
+      "link_losses": 7,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "5->2": {
+      "delivered": 0,
+      "drops": 17,
+      "link_losses": 3,
+      "loops": 14,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "5->4": {
+      "delivered": 5,
+      "drops": 21,
+      "link_losses": 6,
+      "loops": 15,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "5->6": {
+      "delivered": 4,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "50->49": {
+      "delivered": 6,
+      "drops": 15,
+      "link_losses": 7,
+      "loops": 8,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "50->51": {
+      "delivered": 15,
+      "drops": 18,
+      "link_losses": 18,
+      "loops": 0,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "51->26": {
+      "delivered": 0,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "51->50": {
+      "delivered": 19,
+      "drops": 17,
+      "link_losses": 17,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "51->52": {
+      "delivered": 9,
+      "drops": 7,
+      "link_losses": 4,
+      "loops": 3,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "52->27": {
+      "delivered": 4,
+      "drops": 11,
+      "link_losses": 11,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "52->51": {
+      "delivered": 26,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "52->53": {
+      "delivered": 26,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "52->56": {
+      "delivered": 10,
+      "drops": 7,
+      "link_losses": 6,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 1
+    },
+    "52->6": {
+      "delivered": 1,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "53->30": {
+      "delivered": 0,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "53->52": {
+      "delivered": 12,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "53->54": {
+      "delivered": 4,
+      "drops": 9,
+      "link_losses": 8,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "54->53": {
+      "delivered": 13,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "54->55": {
+      "delivered": 4,
+      "drops": 6,
+      "link_losses": 4,
+      "loops": 2,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "55->45": {
+      "delivered": 2,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "55->54": {
+      "delivered": 30,
+      "drops": 7,
+      "link_losses": 5,
+      "loops": 2,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "55->56": {
+      "delivered": 13,
+      "drops": 9,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 1
+    },
+    "55->73": {
+      "delivered": 2,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "56->52": {
+      "delivered": 12,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "56->55": {
+      "delivered": 20,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "56->57": {
+      "delivered": 24,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "57->56": {
+      "delivered": 10,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "57->58": {
+      "delivered": 11,
+      "drops": 22,
+      "link_losses": 22,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "58->57": {
+      "delivered": 23,
+      "drops": 20,
+      "link_losses": 20,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "58->59": {
+      "delivered": 16,
+      "drops": 5,
+      "link_losses": 4,
+      "loops": 1,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "59->58": {
+      "delivered": 20,
+      "drops": 4,
+      "link_losses": 1,
+      "loops": 2,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "59->60": {
+      "delivered": 24,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "59->68": {
+      "delivered": 5,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "6->12": {
+      "delivered": 1,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 1,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "6->22": {
+      "delivered": 5,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "6->5": {
+      "delivered": 22,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "6->52": {
+      "delivered": 2,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "6->7": {
+      "delivered": 12,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "6->76": {
+      "delivered": 5,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "60->39": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "60->59": {
+      "delivered": 12,
+      "drops": 19,
+      "link_losses": 19,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "60->61": {
+      "delivered": 16,
+      "drops": 6,
+      "link_losses": 2,
+      "loops": 1,
+      "sybil_touches": 3,
+      "ttl_expired": 3
+    },
+    "60->8": {
+      "delivered": 2,
+      "drops": 5,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "61->32": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "61->41": {
+      "delivered": 6,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "61->60": {
+      "delivered": 22,
+      "drops": 6,
+      "link_losses": 6,
+      "loops": 0,
+      "sybil_touches": 9,
+      "ttl_expired": 0
+    },
+    "61->62": {
+      "delivered": 16,
+      "drops": 10,
+      "link_losses": 6,
+      "loops": 3,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "62->2": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "62->61": {
+      "delivered": 23,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "62->63": {
+      "delivered": 7,
+      "drops": 11,
+      "link_losses": 11,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "63->22": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "63->39": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "63->40": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "63->62": {
+      "delivered": 15,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "63->64": {
+      "delivered": 21,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "63->75": {
+      "delivered": 2,
+      "drops": 4,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "64->0": {
+      "delivered": 5,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "64->45": {
+      "delivered": 0,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "64->63": {
+      "delivered": 15,
+      "drops": 8,
+      "link_losses": 8,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "64->65": {
+      "delivered": 17,
+      "drops": 9,
+      "link_losses": 5,
+      "loops": 3,
+      "sybil_touches": 1,
+      "ttl_expired": 1
+    },
+    "64->8": {
+      "delivered": 2,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "65->64": {
+      "delivered": 9,
+      "drops": 8,
+      "link_losses": 5,
+      "loops": 3,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "65->66": {
+      "delivered": 19,
+      "drops": 23,
+      "link_losses": 23,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "66->65": {
+      "delivered": 10,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "66->67": {
+      "delivered": 17,
+      "drops": 6,
+      "link_losses": 1,
+      "loops": 5,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "67->66": {
+      "delivered": 18,
+      "drops": 3,
+      "link_losses": 0,
+      "loops": 2,
+      "sybil_touches": 1,
+      "ttl_expired": 1
+    },
+    "67->68": {
+      "delivered": 21,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "68->10": {
+      "delivered": 2,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "68->59": {
+      "delivered": 5,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "68->67": {
+      "delivered": 20,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "68->69": {
+      "delivered": 22,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "69->24": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "69->29": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "69->34": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "69->42": {
+      "delivered": 8,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "69->68": {
+      "delivered": 12,
+      "drops": 13,
+      "link_losses": 10,
+      "loops": 2,
+      "sybil_touches": 0,
+      "ttl_expired": 1
+    },
+    "69->70": {
+      "delivered": 27,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "7->14": {
+      "delivered": 3,
+      "drops": 2,
+      "link_losses": 1,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "7->6": {
+      "delivered": 18,
+      "drops": 14,
+      "link_losses": 12,
+      "loops": 2,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "7->78": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "7->8": {
+      "delivered": 23,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "70->69": {
+      "delivered": 11,
+      "drops": 12,
+      "link_losses": 11,
+      "loops": 1,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "70->71": {
+      "delivered": 18,
+      "drops": 8,
+      "link_losses": 4,
+      "loops": 4,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "71->44": {
+      "delivered": 4,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "71->70": {
+      "delivered": 3,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "71->72": {
+      "delivered": 31,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "72->37": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "72->71": {
+      "delivered": 4,
+      "drops": 3,
+      "link_losses": 2,
+      "loops": 1,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "72->73": {
+      "delivered": 19,
+      "drops": 11,
+      "link_losses": 10,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "73->2": {
+      "delivered": 3,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "73->3": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "73->55": {
+      "delivered": 4,
+      "drops": 5,
+      "link_losses": 3,
+      "loops": 2,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "73->72": {
+      "delivered": 7,
+      "drops": 27,
+      "link_losses": 2,
+      "loops": 25,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "73->74": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "74->73": {
+      "delivered": 6,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "74->75": {
+      "delivered": 2,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "75->12": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "75->28": {
+      "delivered": 1,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "75->63": {
+      "delivered": 5,
+      "drops": 4,
+      "link_losses": 1,
+      "loops": 3,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "75->74": {
+      "delivered": 7,
+      "drops": 9,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 16,
+      "ttl_expired": 0
+    },
+    "75->76": {
+      "delivered": 5,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "75->9": {
+      "delivered": 3,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "76->6": {
+      "delivered": 3,
+      "drops": 3,
+      "link_losses": 3,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "76->75": {
+      "delivered": 16,
+      "drops": 7,
+      "link_losses": 7,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "76->77": {
+      "delivered": 9,
+      "drops": 8,
+      "link_losses": 3,
+      "loops": 5,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "77->47": {
+      "delivered": 1,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "77->76": {
+      "delivered": 18,
+      "drops": 4,
+      "link_losses": 1,
+      "loops": 3,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "77->78": {
+      "delivered": 10,
+      "drops": 4,
+      "link_losses": 4,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "78->10": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "78->12": {
+      "delivered": 2,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "78->22": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "78->7": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "78->77": {
+      "delivered": 14,
+      "drops": 5,
+      "link_losses": 5,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "78->79": {
+      "delivered": 15,
+      "drops": 3,
+      "link_losses": 1,
+      "loops": 2,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "79->0": {
+      "delivered": 15,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "79->18": {
+      "delivered": 1,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "79->31": {
+      "delivered": 2,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "79->78": {
+      "delivered": 12,
+      "drops": 13,
+      "link_losses": 2,
+      "loops": 11,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "8->13": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "8->2": {
+      "delivered": 20,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "8->46": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "8->60": {
+      "delivered": 2,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "8->64": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "8->7": {
+      "delivered": 22,
+      "drops": 12,
+      "link_losses": 12,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "8->9": {
+      "delivered": 26,
+      "drops": 9,
+      "link_losses": 9,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "9->10": {
+      "delivered": 25,
+      "drops": 2,
+      "link_losses": 2,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "9->75": {
+      "delivered": 1,
+      "drops": 3,
+      "link_losses": 1,
+      "loops": 2,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "9->8": {
+      "delivered": 17,
+      "drops": 7,
+      "link_losses": 6,
+      "loops": 1,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    }
+  },
+  "node_usage": {
+    "0": 4.291036669221751,
+    "1": 3.235340459497429,
+    "10": 4.566335445408729,
+    "11": 0.0010311972937756483,
+    "12": 3.3308715865423215,
+    "14": 3.7306299100407894,
+    "15": 2.705264205796727,
+    "16": 3.1407077548247675,
+    "17": 4.070459998428944,
+    "18": 5.088801365614718,
+    "19": 2.5136647895975086,
+    "2": 2.588068423844112,
+    "20": 2.2720168169215027,
+    "21": 1.7082181710422206,
+    "22": 8.535667823817967,
+    "23": 9.380238165508517,
+    "24": 7.588475179483783,
+    "25": 5.066289954712082,
+    "26": 4.91276263724619,
+    "27": 4.9048140493882,
+    "28": 6.206730622498414,
+    "29": 6.621573933305039,
+    "30": 7.747383455421059,
+    "31": 3.884547349241618,
+    "32": 1.4517794763831644,
+    "33": 1.0048200964827803,
+    "34": 3.692079400587382,
+    "35": 1.3545240689911664,
+    "36": 1.095967607319444,
+    "37": 2.2357946395946993,
+    "39": 5.567947445834252e-05,
+    "4": 0.5764266603791646,
+    "40": 6.614766428630406,
+    "41": 7.120932931395156,
+    "42": 6.056264524696884,
+    "43": 1.3433789109972336e-06,
+    "44": 6.953587195342052,
+    "45": 7.139699443074844,
+    "46": 11.544009110630558,
+    "47": 10.743814529119227,
+    "48": 11.400072504465875,
+    "49": 2.920987444240362,
+    "5": 0.6874618202739412,
+    "50": 2.095787147298107,
+    "51": 2.791255419239803,
+    "52": 4.685310294747415,
+    "53": 1.7879913875064735,
+    "54": 1.9971978559483106,
+    "55": 2.762424411102221,
+    "56": 4.581710362512775,
+    "57": 6.105333520966137,
+    "58": 7.402831437053739,
+    "59": 5.578847542426593,
+    "6": 2.3045749937006863,
+    "60": 5.986059403630518,
+    "61": 4.9419185048900545,
+    "62": 3.794635846389054,
+    "63": 5.976278338291192,
+    "64": 4.0469360846656395,
+    "65": 4.789471635588525,
+    "66": 4.946086633947063,
+    "67": 5.48449894457875,
+    "68": 5.129261646738978,
+    "69": 7.592724951593296,
+    "7": 3.035845510968659,
+    "70": 3.2026572637129744,
+    "71": 4.798764083145164,
+    "72": 5.012178881617748,
+    "73": 2.308507470709279,
+    "74": 1.676151648438486e-06,
+    "75": 3.080974603815537,
+    "76": 3.188560012777011,
+    "77": 2.364921940399155,
+    "78": 4.835622043223181,
+    "79": 2.4062644279612884,
+    "8": 5.597925658307032,
+    "9": 4.844283068024258
+  },
+  "peers": {
+    "0": {
+      "delivered": 32,
+      "drops": 54,
+      "link_losses": 31,
+      "loops": 23,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "1": {
+      "delivered": 50,
+      "drops": 31,
+      "link_losses": 22,
+      "loops": 9,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "10": {
+      "delivered": 33,
+      "drops": 25,
+      "link_losses": 25,
+      "loops": 0,
+      "sybil_touches": 13,
+      "ttl_expired": 0
+    },
+    "11": {
+      "delivered": 15,
+      "drops": 11,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 26,
+      "ttl_expired": 0
+    },
+    "12": {
+      "delivered": 33,
+      "drops": 16,
+      "link_losses": 8,
+      "loops": 8,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "13": {
+      "delivered": 1,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "14": {
+      "delivered": 36,
+      "drops": 59,
+      "link_losses": 12,
+      "loops": 47,
+      "sybil_touches": 16,
+      "ttl_expired": 0
+    },
+    "15": {
+      "delivered": 49,
+      "drops": 31,
+      "link_losses": 31,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "16": {
+      "delivered": 54,
+      "drops": 30,
+      "link_losses": 14,
+      "loops": 16,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "17": {
+      "delivered": 47,
+      "drops": 14,
+      "link_losses": 11,
+      "loops": 2,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "18": {
+      "delivered": 23,
+      "drops": 25,
+      "link_losses": 22,
+      "loops": 1,
+      "sybil_touches": 4,
+      "ttl_expired": 2
+    },
+    "19": {
+      "delivered": 46,
+      "drops": 18,
+      "link_losses": 17,
+      "loops": 1,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "2": {
+      "delivered": 31,
+      "drops": 53,
+      "link_losses": 27,
+      "loops": 25,
+      "sybil_touches": 9,
+      "ttl_expired": 1
+    },
+    "20": {
+      "delivered": 42,
+      "drops": 37,
+      "link_losses": 12,
+      "loops": 25,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "21": {
+      "delivered": 44,
+      "drops": 16,
+      "link_losses": 14,
+      "loops": 1,
+      "sybil_touches": 1,
+      "ttl_expired": 1
+    },
+    "22": {
+      "delivered": 51,
+      "drops": 35,
+      "link_losses": 28,
+      "loops": 7,
+      "sybil_touches": 10,
+      "ttl_expired": 0
+    },
+    "23": {
+      "delivered": 56,
+      "drops": 18,
+      "link_losses": 16,
+      "loops": 1,
+      "sybil_touches": 6,
+      "ttl_expired": 1
+    },
+    "24": {
+      "delivered": 34,
+      "drops": 23,
+      "link_losses": 23,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "25": {
+      "delivered": 38,
+      "drops": 15,
+      "link_losses": 4,
+      "loops": 11,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "26": {
+      "delivered": 33,
+      "drops": 32,
+      "link_losses": 20,
+      "loops": 12,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "27": {
+      "delivered": 51,
+      "drops": 36,
+      "link_losses": 25,
+      "loops": 11,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "28": {
+      "delivered": 35,
+      "drops": 17,
+      "link_losses": 17,
+      "loops": 0,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "29": {
+      "delivered": 41,
+      "drops": 18,
+      "link_losses": 15,
+      "loops": 3,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "3": {
+      "delivered": 4,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "30": {
+      "delivered": 31,
+      "drops": 72,
+      "link_losses": 15,
+      "loops": 57,
+      "sybil_touches": 14,
+      "ttl_expired": 0
+    },
+    "31": {
+      "delivered": 34,
+      "drops": 10,
+      "link_losses": 10,
+      "loops": 0,
+      "sybil_touches": 9,
+      "ttl_expired": 0
+    },
+    "32": {
+      "delivered": 19,
+      "drops": 22,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 41,
+      "ttl_expired": 0
+    },
+    "33": {
+      "delivered": 14,
+      "drops": 13,
+      "link_losses": 12,
+      "loops": 1,
+      "sybil_touches": 11,
+      "ttl_expired": 0
+    },
+    "34": {
+      "delivered": 10,
+      "drops": 23,
+      "link_losses": 12,
+      "loops": 11,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "35": {
+      "delivered": 10,
+      "drops": 11,
+      "link_losses": 7,
+      "loops": 4,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "36": {
+      "delivered": 5,
+      "drops": 34,
+      "link_losses": 14,
+      "loops": 20,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "37": {
+      "delivered": 10,
+      "drops": 25,
+      "link_losses": 24,
+      "loops": 0,
+      "sybil_touches": 21,
+      "ttl_expired": 1
+    },
+    "38": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 1,
+      "ttl_expired": 0
+    },
+    "39": {
+      "delivered": 0,
+      "drops": 6,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "4": {
+      "delivered": 51,
+      "drops": 31,
+      "link_losses": 16,
+      "loops": 15,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "40": {
+      "delivered": 29,
+      "drops": 31,
+      "link_losses": 18,
+      "loops": 13,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "41": {
+      "delivered": 40,
+      "drops": 89,
+      "link_losses": 15,
+      "loops": 72,
+      "sybil_touches": 9,
+      "ttl_expired": 2
+    },
+    "42": {
+      "delivered": 28,
+      "drops": 24,
+      "link_losses": 24,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "43": {
+      "delivered": 15,
+      "drops": 10,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 25,
+      "ttl_expired": 0
+    },
+    "44": {
+      "delivered": 46,
+      "drops": 20,
+      "link_losses": 13,
+      "loops": 7,
+      "sybil_touches": 15,
+      "ttl_expired": 0
+    },
+    "45": {
+      "delivered": 45,
+      "drops": 50,
+      "link_losses": 16,
+      "loops": 34,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "46": {
+      "delivered": 45,
+      "drops": 35,
+      "link_losses": 27,
+      "loops": 8,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "47": {
+      "delivered": 38,
+      "drops": 19,
+      "link_losses": 17,
+      "loops": 2,
+      "sybil_touches": 7,
+      "ttl_expired": 0
+    },
+    "48": {
+      "delivered": 37,
+      "drops": 36,
+      "link_losses": 34,
+      "loops": 2,
+      "sybil_touches": 14,
+      "ttl_expired": 0
+    },
+    "49": {
+      "delivered": 29,
+      "drops": 23,
+      "link_losses": 15,
+      "loops": 8,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "5": {
+      "delivered": 27,
+      "drops": 25,
+      "link_losses": 12,
+      "loops": 13,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "50": {
+      "delivered": 31,
+      "drops": 25,
+      "link_losses": 24,
+      "loops": 1,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "51": {
+      "delivered": 41,
+      "drops": 23,
+      "link_losses": 23,
+      "loops": 0,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "52": {
+      "delivered": 42,
+      "drops": 29,
+      "link_losses": 26,
+      "loops": 3,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "53": {
+      "delivered": 40,
+      "drops": 20,
+      "link_losses": 20,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "54": {
+      "delivered": 34,
+      "drops": 16,
+      "link_losses": 13,
+      "loops": 3,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "55": {
+      "delivered": 46,
+      "drops": 18,
+      "link_losses": 13,
+      "loops": 4,
+      "sybil_touches": 4,
+      "ttl_expired": 1
+    },
+    "56": {
+      "delivered": 33,
+      "drops": 20,
+      "link_losses": 17,
+      "loops": 1,
+      "sybil_touches": 5,
+      "ttl_expired": 2
+    },
+    "57": {
+      "delivered": 47,
+      "drops": 25,
+      "link_losses": 25,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "58": {
+      "delivered": 31,
+      "drops": 26,
+      "link_losses": 23,
+      "loops": 2,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "59": {
+      "delivered": 33,
+      "drops": 24,
+      "link_losses": 23,
+      "loops": 1,
+      "sybil_touches": 11,
+      "ttl_expired": 0
+    },
+    "6": {
+      "delivered": 34,
+      "drops": 24,
+      "link_losses": 22,
+      "loops": 2,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "60": {
+      "delivered": 48,
+      "drops": 19,
+      "link_losses": 19,
+      "loops": 0,
+      "sybil_touches": 11,
+      "ttl_expired": 0
+    },
+    "61": {
+      "delivered": 39,
+      "drops": 21,
+      "link_losses": 17,
+      "loops": 1,
+      "sybil_touches": 12,
+      "ttl_expired": 3
+    },
+    "62": {
+      "delivered": 33,
+      "drops": 22,
+      "link_losses": 18,
+      "loops": 3,
+      "sybil_touches": 4,
+      "ttl_expired": 1
+    },
+    "63": {
+      "delivered": 32,
+      "drops": 31,
+      "link_losses": 28,
+      "loops": 3,
+      "sybil_touches": 10,
+      "ttl_expired": 0
+    },
+    "64": {
+      "delivered": 32,
+      "drops": 25,
+      "link_losses": 22,
+      "loops": 3,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "65": {
+      "delivered": 27,
+      "drops": 21,
+      "link_losses": 17,
+      "loops": 3,
+      "sybil_touches": 4,
+      "ttl_expired": 1
+    },
+    "66": {
+      "delivered": 37,
+      "drops": 26,
+      "link_losses": 23,
+      "loops": 2,
+      "sybil_touches": 2,
+      "ttl_expired": 1
+    },
+    "67": {
+      "delivered": 37,
+      "drops": 13,
+      "link_losses": 8,
+      "loops": 5,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "68": {
+      "delivered": 42,
+      "drops": 33,
+      "link_losses": 30,
+      "loops": 2,
+      "sybil_touches": 7,
+      "ttl_expired": 1
+    },
+    "69": {
+      "delivered": 39,
+      "drops": 21,
+      "link_losses": 18,
+      "loops": 2,
+      "sybil_touches": 3,
+      "ttl_expired": 1
+    },
+    "7": {
+      "delivered": 37,
+      "drops": 20,
+      "link_losses": 20,
+      "loops": 0,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "70": {
+      "delivered": 30,
+      "drops": 15,
+      "link_losses": 15,
+      "loops": 0,
+      "sybil_touches": 4,
+      "ttl_expired": 0
+    },
+    "71": {
+      "delivered": 25,
+      "drops": 14,
+      "link_losses": 9,
+      "loops": 5,
+      "sybil_touches": 2,
+      "ttl_expired": 0
+    },
+    "72": {
+      "delivered": 38,
+      "drops": 29,
+      "link_losses": 4,
+      "loops": 25,
+      "sybil_touches": 6,
+      "ttl_expired": 0
+    },
+    "73": {
+      "delivered": 39,
+      "drops": 29,
+      "link_losses": 28,
+      "loops": 1,
+      "sybil_touches": 19,
+      "ttl_expired": 0
+    },
+    "74": {
+      "delivered": 7,
+      "drops": 9,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 16,
+      "ttl_expired": 0
+    },
+    "75": {
+      "delivered": 26,
+      "drops": 20,
+      "link_losses": 17,
+      "loops": 2,
+      "sybil_touches": 10,
+      "ttl_expired": 1
+    },
+    "76": {
+      "delivered": 28,
+      "drops": 20,
+      "link_losses": 17,
+      "loops": 3,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "77": {
+      "delivered": 27,
+      "drops": 18,
+      "link_losses": 13,
+      "loops": 5,
+      "sybil_touches": 3,
+      "ttl_expired": 0
+    },
+    "78": {
+      "delivered": 24,
+      "drops": 23,
+      "link_losses": 12,
+      "loops": 11,
+      "sybil_touches": 8,
+      "ttl_expired": 0
+    },
+    "79": {
+      "delivered": 34,
+      "drops": 22,
+      "link_losses": 20,
+      "loops": 2,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    },
+    "8": {
+      "delivered": 50,
+      "drops": 32,
+      "link_losses": 30,
+      "loops": 1,
+      "sybil_touches": 9,
+      "ttl_expired": 1
+    },
+    "9": {
+      "delivered": 34,
+      "drops": 18,
+      "link_losses": 14,
+      "loops": 4,
+      "sybil_touches": 5,
+      "ttl_expired": 0
+    }
+  },
+  "risk_budget": 0.6458961566667539,
+  "routing_choices": 26441,
+  "version": 3
+}

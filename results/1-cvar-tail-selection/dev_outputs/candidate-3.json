@@ -1,0 +1,15 @@
+{
+  "delivery": 0.5919406861756314,
+  "drop": 0.4080593138243686,
+  "hops": 0.25972296701836123,
+  "latency": 0.25972296701836123,
+  "max_sybil": 0.12502426556752402,
+  "objective": "sybil_stress",
+  "primary_score": 0.6737782201273486,
+  "profile": "results/1-cvar-tail-selection/candidates/candidate-3.json",
+  "scenario_count": 5,
+  "score": 0.6737782201273486,
+  "seed_count": 3,
+  "split": "dev",
+  "sybil": 0.11397624815942407
+}

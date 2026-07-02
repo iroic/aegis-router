@@ -1,0 +1,55 @@
+--- /home/ghost/projects/aegis-router/aegis_router/solvers.py
++++ /tmp/aegis-arbor-node12-slim.NBHzWN/aegis_router/solvers.py
+@@ -239,6 +239,9 @@
+     """
+ 
+     edge_penalty: float = 0.7
++    bridge_penalty: float = 0.18
++    bridge_loss_weight: float = 1.6
++    bridge_redundancy_weight: float = 0.45
+     edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+ 
+     def load(self) -> None:
+@@ -301,7 +304,41 @@
+     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+         assert packet.node is not None
+         edge_badness = self.edge_scores[(packet.node, nb)].badness
+-        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
++        score = super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
++        return score - self._bridge_penalty(graph, packet, nb)
++
++    def _bridge_penalty(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
++        """Cheap local prior for low-redundancy gateway hops.
++
++        Outcome memory needs packets before it can identify a bad gateway. This
++        prior only uses the candidate's one-hop neighborhood and stays
++        conservative: do not penalize the destination, and do not penalize when
++        the current node has no plausible alternate unvisited neighbor.
++        """
++        assert packet.node is not None
++        if self.bridge_penalty <= 0.0 or nb == packet.dst:
++            return 0.0
++        alternatives = [
++            other for other in graph.neighbors(packet.node)
++            if other != nb and other not in packet.visited
++        ]
++        if not alternatives:
++            return 0.0
++        nb_neighbors = [n for n in graph.neighbors(nb) if n != packet.node]
++        if not nb_neighbors:
++            return self.bridge_penalty
++
++        local = set(graph.neighbors(packet.node))
++        shared = sum(1 for n in nb_neighbors if n in local or n == packet.dst)
++        redundancy = shared / max(1, len(nb_neighbors))
++        avg_loss = sum(graph.metrics(nb, n).loss for n in nb_neighbors) / len(nb_neighbors)
++        avg_stability = sum(graph.metrics(nb, n).stability for n in nb_neighbors) / len(nb_neighbors)
++        risk = (
++            self.bridge_loss_weight * avg_loss
++            + self.bridge_redundancy_weight * (1.0 - redundancy)
++            + 0.2 * (1.0 - avg_stability)
++        )
++        return self.bridge_penalty * max(0.0, risk)
+ 
+ 
+ @dataclass

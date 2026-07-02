@@ -1,0 +1,8 @@
+{
+  "node_id": "13",
+  "hypothesis": "Mechanism: Surprise-gated adverse edge feedback with delivery-preserving relief\nHypothesis: Penalize directional edges mainly when drops or Sybil touches are surprising relative to advertised accumulated loss and recent delivery context, so ordinary congestion/noise does not permanently suppress useful routes while deceptive stealth edges still accumulate evidence.\nObservable: B_dev robust_score exceeds 0.684530 with delivery preserved and mean/max Sybil exposure no worse than trunk across the fixed dev suite.\nConflicts: pruned [9] and [12] reduced Sybil by over-suppressing useful routes; this counters by changing when feedback becomes adversarial evidence instead of adding another always-on penalty.",
+  "score": 0.6931173548326843,
+  "insight": "Surprise-gating directional edge feedback improved B_dev while preserving delivery and lowering mean Sybil exposure, but held-out high-Sybil verification still fell below trunk; delivery relief needs a regime or pressure signal before it generalizes.",
+  "result": "B_dev 0.6931173548326843 exceeded trunk 0.6845301005442892, but the single authorized B_test verification scored 0.42070455354319664 below trunk 0.42429066273896465; rejected without merge.",
+  "branch": "/tmp/aegis-arbor-node13-slim.XF4a2a"
+}

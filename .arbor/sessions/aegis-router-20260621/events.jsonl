@@ -1,0 +1,24 @@
+{"event":"session.resume","run_name":"aegis-router-20260621","node_id":"7","detail":"Reconciled stale running node from existing report, files, benchmark state, and process inspection.","timestamp":"2026-06-22T00:27:11+02:00"}
+{"event":"cycle.start","run_name":"aegis-router-20260621","cycle":7,"node_id":"7","timestamp":"2026-06-22T00:27:12+02:00"}
+{"event":"idea.completed","run_name":"aegis-router-20260621","cycle":7,"node_id":"7","b_dev":0.6870040996217148,"timestamp":"2026-06-22T00:27:13+02:00"}
+{"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":7,"node_id":"7","b_test":0.38720314578550286,"test_trunk_score":0.42429066273896465,"reason":"Held-out regression after B_dev improvement.","timestamp":"2026-06-22T00:27:14+02:00"}
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":7,"node_id":"7","decision":"prune","timestamp":"2026-06-22T00:27:15+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":7,"phase":"cycle_end","timestamp":"2026-06-22T00:27:16+02:00"}
+{"event":"session.resume","run_name":"aegis-router-20260621","detail":"Reconciled durable tree, experiment reports, worktrees, and processes; no stale running node or live executor remained.","timestamp":"2026-06-22T19:08:00+02:00"}
+{"event":"cycle.start","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","timestamp":"2026-06-22T19:09:00+02:00"}
+{"event":"idea.proposed","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","timestamp":"2026-06-22T19:09:01+02:00"}
+{"event":"idea.proposed","run_name":"aegis-router-20260621","cycle":8,"node_id":"9","timestamp":"2026-06-22T19:09:02+02:00"}
+{"event":"executor.start","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","isolation":"/tmp/aegis-arbor-node8-20260622","timestamp":"2026-06-22T19:10:00+02:00"}
+{"event":"executor.end","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","tests_passed":11,"b_dev":0.6828301562815761,"timestamp":"2026-06-22T19:15:00+02:00"}
+{"event":"idea.completed","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","b_dev":0.6828301562815761,"timestamp":"2026-06-22T19:16:00+02:00"}
+{"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","reason":"B_dev below validated trunk; B_test not run.","timestamp":"2026-06-22T19:16:01+02:00"}
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","decision":"prune","timestamp":"2026-06-22T19:17:00+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":8,"phase":"cycle_end","timestamp":"2026-06-22T19:17:47+02:00"}
+{"event":"session.resume","run_name":"aegis-router-20260621","detail":"Reconciled durable tree, reports, worktrees, and processes; no stale running node or live executor remained.","timestamp":"2026-06-22T19:20:00+02:00"}
+{"event":"cycle.start","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","timestamp":"2026-06-22T19:21:00+02:00"}
+{"event":"executor.start","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","isolation":"/tmp/aegis-arbor-node9-cycle9-20260622","timestamp":"2026-06-22T19:22:00+02:00"}
+{"event":"executor.end","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","focused_tests_passed":7,"b_dev":0.666964541596115,"timestamp":"2026-06-22T19:32:00+02:00"}
+{"event":"idea.completed","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","b_dev":0.666964541596115,"timestamp":"2026-06-22T19:32:30+02:00"}
+{"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","reason":"B_dev below validated trunk; B_test not run.","timestamp":"2026-06-22T19:33:00+02:00"}
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","decision":"prune","timestamp":"2026-06-22T19:33:30+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":9,"phase":"cycle_end","timestamp":"2026-06-22T19:33:51+02:00"}

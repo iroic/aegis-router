@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refine the best Aegis edge profile across multiple scenarios.
 
-This is a mutation-based optimizer around profiles/aegis-prod-edge-v1.json.
+This is a mutation-based optimizer around profiles/aegis-global-edge-v3.json.
 It optimizes for robust global performance, not just one lucky scenario.
 """
 from __future__ import annotations
@@ -299,8 +299,8 @@ def diverse_elite_ids(rows: list[dict[str, Any]], limit: int) -> list[int]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-profile", default="profiles/aegis-prod-edge-v1.json")
-    ap.add_argument("--parent-top10", default="docs/results/heavy_score_max_top10.csv")
+    ap.add_argument("--base-profile", default="profiles/aegis-global-edge-v3.json")
+    ap.add_argument("--parent-top10", default="docs/results/refine_edge_global_v2_top10.csv")
     ap.add_argument("--candidates", type=int, default=8192)
     ap.add_argument("--stage1-seeds", type=int, default=3)
     ap.add_argument("--stage2-seeds", type=int, default=20)
@@ -308,10 +308,10 @@ def main() -> None:
     ap.add_argument("--top-k", type=int, default=160)
     ap.add_argument("--final-k", type=int, default=24)
     ap.add_argument("--workers", type=int, default=max(1, os.cpu_count() or 1))
-    ap.add_argument("--outdir", default="runs/refine_edge_global_v1")
+    ap.add_argument("--outdir", default="runs/refine_edge_global_v3")
     ap.add_argument("--seed", type=int, default=20260612)
     ap.add_argument("--scenario-limit", type=int, default=0, help="for smoke tests only")
-    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="balanced")
+    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="sybil_stress")
     ap.add_argument("--selection", choices=["scalar", "diverse"], default="diverse")
     args = ap.parse_args()
     outdir=Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,16 @@
+{
+  "delivery": 0.6049261852559059,
+  "drop": 0.3950738147440941,
+  "hops": 6.059211965918315,
+  "latency": 1.8488508970488782,
+  "max_sybil": 0.13839219272417505,
+  "objective": "sybil_stress",
+  "primary_score": 0.6933176702330417,
+  "profile": "profiles/aegis-confidence-gated-edge-v1.json",
+  "risk": 0.2571760438790296,
+  "scenario_count": 5,
+  "score": 0.6933176702330417,
+  "seed_count": 3,
+  "split": "dev",
+  "sybil": 0.12244518295905275
+}

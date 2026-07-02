@@ -1,0 +1,15 @@
+{
+  "delivery": 0.6048828203201181,
+  "drop": 0.3951171796798819,
+  "hops": 0.25760560608178285,
+  "latency": 0.25760560608178285,
+  "max_sybil": 0.14142051638978148,
+  "objective": "sybil_stress",
+  "primary_score": 0.6669743086973007,
+  "profile": "profiles/aegis-two-profile-bandit-v1.json",
+  "scenario_count": 5,
+  "score": 0.6669743086973007,
+  "seed_count": 3,
+  "split": "dev",
+  "sybil": 0.12305470421882768
+}

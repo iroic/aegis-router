@@ -1,0 +1,3484 @@
+OpenAI Codex v0.141.0
+--------
+workdir: /home/ghost/projects/aegis-router
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019ef07e-a8f5-7ef0-9145-f7ba3d63fb67
+--------
+user
+# Aegis Router — autonomous Arbor continuation
+
+Use `$arbor-research-agent` and resume the durable Arbor session
+`aegis-router-20260621` in `/home/ghost/projects/aegis-router`.
+
+Run exactly one complete coordinator cycle, then exit cleanly so the external
+supervisor can enforce pacing and restart the next cycle.
+
+Rules:
+
+- Resume existing state; never restart intake or erase prior experiments.
+- First reconcile stale `running` nodes with their existing reports, files,
+  processes, and metrics.
+- Use B_dev for iteration. Use B_test only once for a candidate that beats the
+  current trunk on B_dev and is ready for merge verification.
+- Never optimize against B_test results.
+- Do not modify protected benchmark scenarios, evaluation scripts, existing
+  tests, seeds, or metric formulas.
+- Preserve existing APIs and keep existing tests green.
+- Implement experiments through isolated executor agents/worktrees when
+  possible.
+- Keep rejected experiments as reports/branches, but remove their candidate
+  code from the active working tree.
+- Never push, force-push, create a pull request, delete branches, or publish
+  externally.
+- Do not install system packages or request interactive input.
+- Prefer lightweight, deterministic, measurable mechanisms.
+- If no pending node exists, inspect constraints, use the strict ideation gate,
+  add 1–3 genuinely new hypotheses, select one, and execute it.
+- Record the completed node, propagate insights, and update the durable report
+  before exiting.
+
+Current validated trunk:
+
+- B_dev: `0.6845301005442892`
+- B_test: `0.42429066273896465`
+- profile: `profiles/aegis-global-edge-v3.json`
+
+Primary objective: improve held-out delivery and robustness while reducing
+Sybil exposure, packet loss, latency, and route length across dynamic
+adversarial networks.
+
+codex
+I’m using `arbor-research-agent` to resume the existing durable session. I’ll reconcile stale work first, run exactly one coordinator cycle, update durable artifacts, and stop.
+exec
+/usr/bin/zsh -lc "sed -n '1,240p' /home/ghost/.codex/skills/arbor-research-agent/SKILL.md && sed -n '1,300p' /home/ghost/.codex/skills/arbor-agent-orchestrator/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-research-agent
+description: "Public entrypoint for the Arbor skill suite. Use when a user wants to run an Arbor-style autonomous research or optimization workflow from a natural-language goal, including initial clarification of objective, target project, data, metric, evaluation, permissions, budget, run mode, and then automatic bootstrapping into arbor-agent-orchestrator and phase skills."
+---
+
+# Arbor Research Agent
+
+Use this as the single user-facing entrypoint. The user should be able to say
+`$arbor-research-agent` plus a plain-language goal, similar to using `arbor`,
+without knowing the internal phase skills.
+
+This skill performs Arbor-style intake and clarification, then hands control to
+`arbor-agent-orchestrator`.
+
+## Entry Protocol
+
+1. Treat the launch cwd as the default target project unless the user names a
+   different path.
+2. Read available local context before asking: README summaries, config/eval
+   hints, cached metrics, dataset notes, and git state.
+3. Decide whether the request is clear enough to start. If not, ask concise
+   Arbor-style clarification questions before optimizing.
+4. Once the contract is clear, load `arbor-agent-orchestrator` and continue
+   with its phase loading order.
+
+Do not ask for information that can be discovered safely from local files.
+Ask only for decisions, permissions, missing objectives, or ambiguous tradeoffs.
+
+## Intake Context Budget
+
+Keep wrapper intake small. Its job is to determine the run contract, not to
+fully analyze the target project.
+
+- Start with `pwd`, git branch/status, `rg --files`, and concise slices such as
+  README/config/eval metadata.
+- Use `rg` to locate metric/eval/data hints before opening files. Prefer
+  focused `sed -n` ranges over full-file reads.
+- Do not bulk-read long logs, notebooks, lockfiles, generated outputs, or large
+  source files during wrapper intake.
+- For training logs or progress logs, avoid raw `cat`, raw `grep`, or broad
+  `tail`. If `arbor-agent-tools` is available, use `arbor_state.py parse-log`;
+  otherwise normalize carriage returns with `tr '\r' '\n'` and inspect only the
+  metric lines needed for the contract.
+- Defer deep code reading to `arbor-agent-setup-intake`, `arbor-agent-executor`,
+  or the relevant phase skill after the orchestrator is loaded.
+
+## Clarification Gate
+
+If any of these are missing or ambiguous after local inspection, ask before
+starting the optimization loop:
+
+- **Target**: project directory, repo branch, and whether the current branch is
+  acceptable.
+- **Objective**: what should improve and whether the run is maximize/minimize.
+- **Metric/eval**: command, score field, B_dev/B_test split, and whether cached
+  baseline evidence may be used.
+- **Data**: data location, protected/private paths, and whether preparation or
+  downloads are allowed.
+- **Permissions**: whether source edits, worktrees, commits, package installs,
+  internet, GPU jobs, long training, and merge attempts are allowed.
+- **Budget**: smoke vs real run, max cycles, wall-clock/training budget, and
+  stop condition.
+- **Scope preference**: novelty-leaning, effect-leaning, performance-first, or
+  mixed.
+- **Human gates**: auto, direction, review, or collaborative mode.
+
+Ask as one compact checkpoint, not a long interview. Example:
+
+```text
+I can start, but I need these defaults confirmed:
+- target: <cwd>
+- objective/metric: <inferred metric, direction>
+- eval: <inferred command or unknown>
+- run mode: smoke / real
+- permissions: may edit code? may run training/GPU? may install packages?
+- budget: <cycles/time>
+
+Reply "yes" to accept, or edit any line.
+```
+
+If the user already gave enough information or explicitly says to use defaults,
+do not block on extra confirmation. Proceed with the best conservative contract.
+
+## Contract To Pass Down
+
+Before loading the orchestrator, form a concise contract containing:
+
+- target cwd and git branch;
+- instruction/task;
+- metric name and direction;
+- B_dev/B_test policy;
+- baseline status;
+- eval command or smoke/cached parser;
+- protected files and allowed edit surface;
+- run mode and budget;
+- user interaction mode;
+- any unresolved caveats.
+
+Then load `arbor-agent-orchestrator` and pass this contract as the run
+instruction. The orchestrator owns phase loading from that point.
+
+## Run Mode Defaults
+
+- If the user asks to "try", "test", "validate", "demo", or "see behavior",
+  default to smoke-only.
+- If the project eval is known to run training, downloads, GPU jobs, or
+  minute-scale work, ask before running it.
+- In smoke mode, load `arbor-agent-tools` when native Arbor tools are absent,
+  use cached metrics or `arbor_state.py parse-log`, generate
+  `prompt-executor --smoke`, then run `check`, `report`, and a final
+  artifact-level `check`.
+- In real mode, still complete setup and contract confirmation before any long
+  eval, training, package install, or merge.
+
+## Bootstrap Sequence
+
+After intake:
+
+1. Load `arbor-agent-orchestrator`.
+2. Ensure `arbor-agent-setup-intake` receives the contract.
+3. Let the orchestrator load phase skills as needed:
+   - `arbor-agent-coordinator`
+   - `arbor-agent-ideate`
+   - `arbor-agent-executor`
+   - `arbor-agent-merge-eval`
+   - `arbor-agent-search`
+   - `arbor-agent-plugins-hitl-budget`
+   - `arbor-agent-resume-report`
+   - `arbor-agent-tools`
+4. Keep the user-facing behavior at the Arbor level. Do not expose internal
+   skill mechanics unless useful for debugging or reporting.
+
+## Expected User Experience
+
+The user can write:
+
+```text
+$arbor-research-agent optimize this repo for leaderboard score overnight
+```
+
+or:
+
+```text
+$arbor-research-agent try a simplified smoke run on this autoresearch repo
+```
+
+Expected behavior:
+
+- inspect project and infer what can be inferred;
+- ask a compact clarification/permission checkpoint if needed;
+- create or select `.arbor/sessions/<run_name>/`;
+- initialize durable Idea Tree state;
+- run the Arbor loop through orchestrator and phase skills;
+- use executor/worktree/report discipline rather than ad hoc edits;
+- keep B_test protected;
+- stop according to budget or smoke instruction;
+- report durable artifacts and caveats.
+- once `REPORT.md` and expected smoke artifacts exist, stop promptly with a
+  concise final response instead of continuing to polish reports or run extra
+  cycles.
+
+## Hard Rules
+
+- Do not begin optimization when objective, edit permissions, or expensive eval
+  permission is genuinely ambiguous.
+- Do not run training, data downloads, package installs, GPU jobs, or long eval
+  commands before the user has allowed them or the contract clearly permits
+  them.
+- Do not use B_test for routine iteration.
+- Do not modify protected data/eval/private paths.
+- Do not bypass the orchestrator after intake; this skill is the public shell,
+  not a second coordinator implementation.
+- Do not spend wrapper context recreating setup, coordinator, or executor logic;
+  once the contract is clear, load the orchestrator.
+- Do not continue running after the requested budget is complete and final
+  artifacts have been validated. Finalize with artifact paths, scores, and
+  caveats.
+---
+name: arbor-agent-orchestrator
+description: "Top-level controller for recreating the open-source AutoResearch workflow as a suite of skills. Use when the user asks to run, emulate, extract, validate, or refine Arbor/AutoResearch behavior, especially when a coordinator must load phase skills for setup, ideation, executors, merge evaluation, novelty search, plugins, resume, and reports."
+---
+
+# Arbor Agent Orchestrator
+
+Use this as the first skill for an Arbor-style research run. It is the phase
+loader and policy owner; load the smaller skills only when their phase applies.
+For normal user-facing use, prefer starting with `arbor-research-agent`; that
+wrapper performs Arbor-style intake and then loads this orchestrator.
+
+## Source Model
+
+This suite mirrors the `open-source` branch of `arbor`, not the older
+single hypothesis-tree extraction. The product entry point is `arbor`; the run
+architecture is:
+
+- Intake/planning agent creates a research contract.
+- Coordinator runs one persistent ReAct loop and owns the Idea Tree.
+- Executors implement ideas in isolated git worktrees.
+- Merge/eval tooling protects B_test and trunk.
+- SearchAgent annotates validated nodes with related work.
+- Plugins, HITL, budget policy, checkpoint/resume, dashboard, and report are
+  first-class behavior, not optional notes.
+
+Read `references/source-map.md` when auditing against the source tree or when
+you need exact file origins.
+Read `references/compatibility.md` when packaging the suite for another agent
+runtime or checking Codex/Claude Code portability.
+
+## Phase Loading Order
+
+1. **Launch and contract**: load `arbor-agent-setup-intake`.
+   Establish target cwd, metric, baseline status, budget, scope preference,
+   dev/test discipline, config/plugin choice, and session directory.
+
+2. **Coordinator loop**: load `arbor-agent-coordinator`.
+   Run INIT, OBSERVE, IDEATE, SELECT, DISPATCH, DECIDE until the cycle cap,
+   budget limit, or diminishing returns says to stop.
+
+3. **IDEATE only**: load `arbor-agent-ideate`.
+   This is a hard gate for novelty/scientific runs. It must follow
+   `TreeView(format="constraints")` and precede every `TreeAddNode`. If a
+   plugin disables strict skills for performance-first MLE/Kaggle, use the
+   free-form path described by `arbor-agent-plugins-hitl-budget` instead.
+
+4. **Executor dispatch**: load `arbor-agent-executor`.
+   Use for `RunExecutor` / `RunExecutorParallel` behavior, worktree lifecycle,
+   executor prompts, long `RunTraining` commands, report parsing, artifact
+   capture, and tree updates.
+
+5. **Merge and scoring**: load `arbor-agent-merge-eval`.
+   Use before baseline metadata changes, merge attempts, B_test verification,
+   protected-path checks, and final test scoring.
+
+6. **Related work**: load `arbor-agent-search`.
+   Use after a node is `done` or `merged` and beat trunk, especially before
+   merge decisions where novelty matters.
+
+7. **Domain adaptation and human gates**: load
+   `arbor-agent-plugins-hitl-budget` when config mentions plugins, profiles,
+   `mle_kaggle`, lifecycle hooks, convergence, budget policy, or
+   interaction modes `direction`, `review`, or `collaborative`.
+
+8. **Resume and finalization**: load `arbor-agent-resume-report` when the run
+   is interrupted/resumed, when dashboard/events/checkpoint artifacts matter,
+   or when producing `REPORT.md`.
+
+9. **No native Arbor tools**: load `arbor-agent-tools`.
+   Use its `scripts/arbor_state.py` helper to emulate `TreeView`,
+   `TreeAddNode`, `TreeSetMeta`, `TreeUpdateNode`, `TreePrune`,
+   `TreePropagate`, executor prompt generation, eval score capture, merge
+   checks, and report generation in a plain Codex/Claude environment.
+
+## Non-Negotiable Invariants
+
+- As coordinator, do not write benchmark code directly. Code changes happen
+  through executor branches or clearly separated executor subagents.
+- Maintain an Idea Tree as durable memory. Do not rely on transient chat
+  reasoning for run state.
+- Record `baseline_score`, `trunk_score`, `eval_cmd`, `eval_cmd_test`,
+  `dataset_info`, `metric_direction`, and `trunk_branch` as metadata before
+  dispatching real executors.
+- Use B_dev for iteration. Use B_test only for merge verification and final
+  reporting when the contract permits B_test and the run is not smoke-only.
+- Use eval command templates with `{cwd}` and `{node_id}`. Do not hardcode the
+  main repository path inside executor eval commands.
+- Keep main/master protected. Merge only into the configured trunk branch.
+- If using `arbor_state.py`, run tree-mutating commands serially. Do not
+  parallelize `init`, `meta`, `add`, `update`, `prune`, `propagate`, `eval`,
+  `record`, `worktree`, or `merge` against the same run.
+- Preserve evidence: experiment reports, metrics, diffs, event logs, tree JSON,
+  tree Markdown, run stats, and final report.
+- If the real `arbor` CLI is installed and the user wants a real run, prefer
+  invoking it. If the user wants a skill-based reconstruction or a smoke test,
+  emulate the behavior with this suite and `arbor-agent-tools`.
+
+## Smoke And Forward-Test Mode
+
+When the user asks for a smoke test, forward test, dry run, or validation of
+the skill suite, propagate `smoke-only` through the contract, metadata,
+executor prompt, raw reports, and final summary.
+
+- Do not execute inherited real eval commands if they run training, data prep,
+  downloads, GPU jobs, or minute-scale benchmarks.
+- Replace expensive eval commands with `arbor_state.py parse-log`, another
+  cached-score parser, a harmless echo, or an explicitly labelled mocked score
+  for plumbing validation.
+- Do not `cat`, raw `rg`, raw `grep`, or `tail` long training logs. Some logs
+  use carriage-return progress updates that make one physical line enormous.
+  Use `arbor_state.py parse-log` or normalize with `tr '\r' '\n'` before
+  matching; only inspect at most 20 log lines when debugging a failure.
+- Generate executor prompts with `arbor_state.py prompt-executor --smoke`.
+  Save the generated prompt as `experiments/<node_id>/executor_prompt.md`.
+- Do not create real worktrees, edit source, or merge branches unless the user
+  explicitly wants a real run.
+- Still complete the durable Arbor artifacts: tree JSON/Markdown, experiment
+  report/metrics, executor prompt, `check`, and `REPORT.md`.
+
+## Minimal Run Skeleton
+
+Use this skeleton when no native `arbor` runtime is available:
+
+1. Load `arbor-agent-setup-intake`; produce a contract and initialize
+   `.arbor/sessions/<run_name>/.coordinator/idea_tree.json`.
+2. Load `arbor-agent-coordinator`; complete INIT and metadata.
+3. For each cycle:
+   - OBSERVE code/results.
+   - `TreeView(format="constraints")`.
+   - Load `arbor-agent-ideate`; add 1-3 ideas.
+   - SELECT pending leaves.
+   - Load `arbor-agent-executor`; dispatch one or more executors.
+   - Load `arbor-agent-search` for validated winners when useful.
+   - Load `arbor-agent-merge-eval`; merge, prune, or continue.
+4. Load `arbor-agent-resume-report`; run final B_test only if it is available,
+   authorized, and the run is not smoke-only; write `REPORT.md`; summarize
+   artifact paths.
+
+## Common Failure Corrections
+
+- If only one monolithic skill exists, split it by the phase list above.
+- If ideation starts without constraints and the idea-drafting gate, restart
+  IDEATE from `TreeView(format="constraints")`.
+- If an executor evaluates in the main repo rather than its worktree, discard
+  that score and rerun with `{cwd}` substitution.
+- If B_test is used for routine idea selection, mark the run contaminated and
+  reset the decision basis to B_dev.
+- If reports contain deltas only, convert tree scores to absolute metric
+  values.
+
+exec
+/usr/bin/zsh -lc "for f in \\
+/home/ghost/.codex/skills/arbor-agent-setup-intake/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-coordinator/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-resume-report/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-tools/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-ideate/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-executor/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-merge-eval/SKILL.md \\
+/home/ghost/.codex/skills/arbor-agent-plugins-hitl-budget/SKILL.md; do sed -n '1,400p' \""'$f"; done' in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-agent-setup-intake
+description: "Setup, intake, preflight, and launch-contract phase for open-source Arbor runs. Use when confirming a target project, metric, baseline, dev/test split, config/plugin settings, branch guard, session directory, or when translating a user goal into the precise contract consumed by the coordinator."
+---
+
+# Arbor Setup And Intake
+
+Use this before the coordinator starts. The output is a concrete research
+contract plus a clean workspace/session ready for the Arbor cycle.
+
+## Fast Path
+
+1. Confirm the target project directory. Treat the launch cwd as the default
+   unless evidence says it is wrong.
+2. Inspect README/config/eval files yourself. Do not ask the user to recite
+   data you can read.
+3. Identify the primary metric, direction, and real evaluation command.
+4. Determine B_dev and B_test. If only one split exists, call it B_dev and
+   record that no separate B_test is available.
+5. Run or locate a cheap baseline when feasible. If not feasible, state
+   `baseline unknown - measure during INIT`.
+6. Propose one complete contract and ask for a single yes/edit confirmation.
+7. Initialize or select `.arbor/sessions/<run_name>/` and hand the contract
+   to the coordinator.
+8. If real merges are allowed, define a non-protected `trunk_branch` such as
+   `arbor/trunk/<run_name>`. Treat `main`/`master` as the base branch, not the
+   merge target.
+
+For smoke/forward tests, never run expensive setup, data prep, training, GPU
+jobs, or the discovered full eval command. Locate an existing score in cached
+metadata/logs or use a clearly labelled mocked score, and include
+`smoke-only` in the contract.
+
+## Research Contract
+
+The instruction passed to the coordinator must contain all five components:
+
+- **Metric**: exact score name, command that prints it, and maximize/minimize.
+- **Baseline anchor**: current value if known, otherwise say it will be
+  measured in INIT.
+- **Ambition**: beat baseline, reach a target, or push as high as possible
+  within the cycle budget.
+- **Scope preference**: novelty-leaning, effect-leaning, or mixed. Infer it
+  from the repo/task when possible.
+- **Hard constraints**: at minimum, B_test is not for iteration, data/eval
+  harness must not be modified to game the metric, and project-specific
+  protected paths must be respected.
+
+Do not prescribe a specific approach in the contract. The coordinator owns
+idea generation.
+
+## Preflight Checks
+
+Mirror `arbor run` preflight:
+
+- LLM credentials or provider config exist if using the real CLI.
+- `cwd` exists and is non-empty.
+- `git` exists. A git repo should be clean before a fresh run.
+- An eval entry point exists or can be discovered (`eval.sh`, `run_eval.py`,
+  `evaluate.py`, README instructions, Makefile targets, etc.).
+- If the repo is on a non-base branch, either switch to the base branch or
+  explicitly allow starting from that branch.
+
+For skill-only smoke tests, do not require external API credentials unless an
+LLM call will actually be made.
+
+## Session Layout
+
+Use the open-source layout:
+
+```text
+<project>/.arbor/sessions/<run_name>/
+  REPORT.md
+  COORDINATOR_FINAL_REPORT.txt
+  events.jsonl
+  run_stats.json
+  conversation.md
+  .coordinator/
+    idea_tree.json
+    idea_tree.md
+    checkpoint.json
+    messages.jsonl
+    baseline_cache.json
+  experiments/<node_id>/
+    report.md
+    metrics.json
+    diff.patch
+  submissions/
+```
+
+When no native Arbor runtime exists, initialize the same layout with:
+
+```bash
+TOOLS="<skill-dir>/arbor-agent-tools/scripts/arbor_state.py"
+python "$TOOLS" init \
+  --cwd <project> --run-name <run_name> --task "<contract>"
+```
+
+## Config And Plugins
+
+Honor this precedence:
+
+```text
+pydantic defaults < plugin.config_overrides < profile < project YAML < CLI
+```
+
+Recognize auto config names in the target project:
+
+- `research_config.yaml`
+- `arbor.yaml`
+- `autoresearch.yaml`
+
+If `plugin: mle_kaggle` is selected, load
+`arbor-agent-plugins-hitl-budget` before INIT because the plugin pre-fills
+eval contract, protected paths, required outputs, time budget, and skill
+behavior.
+
+## Baseline Metadata
+
+The setup phase can discover metadata, but the coordinator must persist it:
+
+- `baseline_score`
+- `trunk_score`
+- `test_baseline_score`
+- `test_trunk_score`
+- `eval_cmd`
+- `eval_cmd_test`
+- `eval_timeout`
+- `eval_retries`
+- `dataset_info`
+- `metric_direction`
+- `trunk_branch`
+- `submission_path`
+- `sample_submission_path`
+
+Use command templates:
+
+```text
+cd {cwd} && <eval command> --run-name {node_id}
+```
+
+Never bake the main checkout path into executor commands.
+
+When using `arbor_state.py meta`, quote any `--set` value that contains
+spaces, braces, shell metacharacters, or JSON:
+
+```bash
+python "$TOOLS" meta --cwd <project> --run-name <run_name> \
+  --set "eval_cmd=cd {cwd} && python eval.py --split dev" \
+  --set "trunk_branch=arbor/trunk/<run_name>"
+```
+
+In smoke mode, if a cached baseline log exists, parse only metric lines with
+`arbor_state.py parse-log` or an equivalent parser that normalizes carriage
+returns. Do not `cat`, raw `rg`, raw `grep`, or `tail` long training logs; if
+debugging requires context, cap output to 20 lines.
+
+## Launch Commands
+
+Native runtime examples:
+
+```bash
+arbor setup
+arbor doctor
+arbor run "<contract>" --yes --yes-cwd <project> --config <config> --max-cycles 3
+arbor report <project>/.arbor/sessions/<run_name>
+```
+
+Skill-only smoke tests should use `arbor-agent-tools` and a copied project
+directory unless the user explicitly wants to modify the live repo.
+---
+name: arbor-agent-coordinator
+description: "Coordinator phase for Arbor: persistent ReAct loop, Idea Tree state, INIT/OBSERVE/IDEATE/SELECT/DISPATCH/DECIDE protocol, tool mapping, cycle caps, and coordinator-only behavior. Use after setup/intake and before phase-specific ideation, executor, merge, search, or report skills."
+---
+
+# Arbor Coordinator
+
+Use this to run the strategic loop. The coordinator is a research commander,
+not the code author.
+
+## Coordinator Role
+
+- Do not edit benchmark code directly.
+- Maintain the Idea Tree as durable memory.
+- Dispatch executors to implement leaf ideas.
+- Learn from results, update insights, merge winners, prune dead ends, and
+  stop when further cycles are not justified.
+- Treat user dashboard notes as operator input, not benchmark evidence.
+
+## Arbor Cycle
+
+### Step 0: INIT
+
+Run once at the start unless resuming.
+
+1. Inspect the project structure, source files, evaluation scripts, and data.
+2. Identify B_dev and B_test.
+3. Run or locate the unmodified baseline on B_dev.
+4. Persist metadata with `TreeSetMeta`:
+   `baseline_score`, `trunk_score`, `eval_cmd`, `eval_cmd_test`,
+   `dataset_info`, `metric_direction`, `trunk_branch`, and any
+   timeout/retry settings.
+5. If a plugin supplies an `eval_contract`, prefill the matching metadata.
+
+If resuming, skip INIT and call `TreeView` to re-orient.
+
+If the run is smoke-only, do not run expensive baselines or inherited real
+eval commands. Persist a cheap cached-score parser or explicitly mocked score
+as the eval command, set short timeout metadata, and mark `dataset_info` and
+node reports as smoke-only.
+
+### Step 1: OBSERVE
+
+Read code, logs, prior experiment reports, tree insights, failure cases, and
+score patterns. Focus on failure classes and bottlenecks, not just symptoms.
+For large logs, use `arbor_state.py parse-log` or normalize carriage returns
+before matching metric lines. Do not flood context with full training logs
+during smoke or forward tests.
+
+### Step 2: IDEATE
+
+1. Call `TreeView(format="constraints")` first.
+2. If strict skills are enabled, immediately load `arbor-agent-ideate`.
+3. Add only ideas that pass the ideation gate.
+
+Depth semantics:
+
+- Depth 0: root objective and global insight.
+- Depth 1: broad strategy categories.
+- Depth 2+: concrete implementable approaches.
+
+### Step 3: SELECT
+
+Choose pending leaves using evidence, expected impact, feasibility, diversity,
+and recoverable failure modes. Use `TreeView(format="pending")` or compact view.
+
+### Step 4: DISPATCH And UPDATE
+
+Load `arbor-agent-executor` and dispatch:
+
+- One idea: `RunExecutor(node_id, additional_context=...)`.
+- Independent ideas: `RunExecutorParallel(tasks=[...])`, usually 2-4 tasks.
+
+Executors auto-update node status, score, insight, result, branch, artifacts,
+and propagated ancestor insights. If extraction is wrong, correct it with
+`TreeUpdateNode`.
+
+Scores in the tree are absolute B_dev metric values, not deltas.
+
+### Step 5: DECIDE
+
+Use `arbor-agent-merge-eval` for merge decisions.
+
+- Continue: more promising directions exist.
+- Merge: B_dev beats trunk enough and B_test verification passes.
+- Prune: repeated failures with no credible recovery path.
+- Stop: cap/budget reached, diminishing returns, or no pending ideas.
+
+Before stopping, run final B_test only if it is available, the contract permits
+it, and the run is not smoke-only. Record `test_trunk_score` when the final
+test run is valid.
+
+## Idea Tree Schema
+
+Node statuses are:
+
+- `pending`
+- `running`
+- `done`
+- `merged`
+- `pruned`
+
+Each node stores:
+
+- `id`, `parent_id`, `children_ids`, `depth`
+- `hypothesis`
+- `status`
+- `insight`
+- `result`
+- `score`
+- `code_ref`
+- `related_work`
+
+Tree metadata stores:
+
+- `baseline_score`, `trunk_score`
+- `test_baseline_score`, `test_trunk_score`
+- `eval_cmd`, `eval_cmd_test`
+- `eval_timeout`, `eval_retries`, retry backoff
+- `dataset_info`
+- `metric_direction`
+- `trunk_branch`
+- `submission_path`, `sample_submission_path`
+
+## Tool Mapping
+
+Native Arbor tools:
+
+- `TreeView`: compact/full/node/pending/constraints.
+- `TreeAddNode`: add child with generated id.
+- `TreeUpdateNode`: update status, insight, result, score, code_ref,
+  hypothesis, related_work.
+- `TreeSetMeta`: persist evaluation metadata.
+- `TreePrune`: mark a subtree pruned.
+- `TreePropagate`: synthesize child insights upward.
+- `RunExecutor`, `RunExecutorParallel`: run implementation agents.
+- `GitMergeBranch`: B_test verify and merge.
+- `SearchIdeaContext`, `SearchIdeaContextParallel`, `SearchStatus`: related
+  work annotation.
+
+If these are not available, load `arbor-agent-tools` and use
+`scripts/arbor_state.py` as the state backend.
+
+When using the fallback helper, serialize tree-mutating commands for the same
+run. Do not launch `meta`, `add`, `update`, `prune`, `propagate`, `eval`,
+`record`, `worktree`, or `merge` in parallel.
+
+## Cycle Caps
+
+Count cycles once a node is done, merged, pruned, or failed. If the hard cap is
+reached, do not launch more executors. Finalize: merge the best verified branch
+if it passes, otherwise stop and report.
+
+## AskUser And Live Notes
+
+Use human questions only when genuinely blocked on information that cannot be
+discovered locally. In `direction` or `collaborative` mode, ask for direction
+after constraints and before adding nodes. In `review` modes, respect skipped
+or edited ideas and executor gates.
+---
+name: arbor-agent-resume-report
+description: "Resume, checkpoint, event, dashboard, finalization, and report phase for Arbor. Use when continuing interrupted sessions, handling running-node requeue, writing checkpoints/messages, consuming events.jsonl/run_stats, recovering best submissions, generating REPORT.md, or summarizing durable artifacts."
+---
+
+# Arbor Resume And Report
+
+Use this when a run stops, resumes, times out, or needs a durable report.
+
+## Checkpoint Files
+
+Open-source Arbor stores the run under:
+
+```text
+.arbor/sessions/<run_name>/
+  .coordinator/
+    idea_tree.json
+    idea_tree.md
+    checkpoint.json
+    messages.jsonl
+  events.jsonl
+  run_stats.json
+  REPORT.md
+```
+
+`idea_tree.json` is the primary state. `messages.jsonl` restores conversation
+history. `checkpoint.json` stores run name, cycle number, phase, git state,
+in-flight executors, cache anchors, and pending human gates.
+
+## Resume Procedure
+
+1. Require an existing `.coordinator/idea_tree.json`.
+2. Load the tree.
+3. Requeue nodes left as `running` by setting them back to `pending`.
+4. Replay `messages.jsonl` if available.
+5. Seal any dangling tool-use tail with an interrupted-result marker.
+6. Append a short resume nudge:
+   - do not restart INIT;
+   - call `TreeView`;
+   - continue the loop from pending nodes.
+7. Keep the existing workspace/session directory.
+
+If the tree is corrupt, do not pretend resume is possible. Start a fresh run
+in a clean session only after making that explicit.
+
+## Events
+
+Important event families:
+
+- `session.start`, `session.end`, `session.checkpoint`
+- `cycle.start`, `cycle.end`, `cycle.phase`
+- `idea.proposed`, `idea.completed`, `idea.pruned`, `idea.merged`
+- `executor.start`, `executor.end`
+- `tool.start`, `tool.end`
+- `llm.call`, `llm.error`, `llm.cache_stat`
+- `user.await`, `user.input_received`
+- `progress.heartbeat`
+
+Events are JSON-serializable and secret-free. The dashboard, WebUI, stats
+collector, and reports consume them.
+
+## Shutdown
+
+Before final report:
+
+1. Wait for background SearchAgents to flush if any are pending.
+2. Write final checkpoint and messages.
+3. Run plugin `on_finalize` hook if present.
+4. On emergency timeout, recover best submission:
+   - keep trunk `submission.csv` if present;
+   - otherwise copy the best scored snapshot from `submissions/`;
+   - otherwise copy the most recent snapshot.
+5. Write `run_stats.json`.
+6. Generate `REPORT.md`.
+
+In smoke/forward tests, finalization is still mandatory even when no real
+executor, merge, or B_test ran. Generate `REPORT.md`, make the smoke caveat
+explicit, and stop after artifact validation.
+
+After `REPORT.md` is written and expected artifacts validate, do not keep
+polishing reports or launching extra checks. Return a concise final response
+with paths, scores, and caveats.
+
+## REPORT.md Contents
+
+Include:
+
+- instruction/task;
+- exit reason;
+- model/provider if known;
+- event summary;
+- run stats and token scope;
+- baseline/final B_dev;
+- baseline/final B_test when available;
+- merged ideas;
+- top ideas by score;
+- artifact paths.
+
+Reports must tolerate partial data. Missing stats, events, or tree fields
+should produce a partial report, not a crash.
+
+## Manual Report Generation
+
+Native:
+
+```bash
+arbor report <project>/.arbor/sessions/<run_name>
+```
+
+Skill-only:
+
+```bash
+python <tools>/arbor_state.py report --cwd <project> --run-name <run_name>
+```
+
+For skill-suite smoke tests, run `python <tools>/arbor_state.py check` before
+`report` for tree integrity, then run it again after `report` with artifact
+flags:
+
+```bash
+python <tools>/arbor_state.py check --cwd <project> --run-name <run_name>
+python <tools>/arbor_state.py report --cwd <project> --run-name <run_name>
+python <tools>/arbor_state.py check --cwd <project> --run-name <run_name> \
+  --require-report --require-experiment --require-executor-prompt
+```
+
+Use `--strict-artifacts` only for full sessions that are expected to contain
+events and run stats in addition to tree, experiment, prompt, and report
+artifacts.
+
+## Final Response To User
+
+Summarize durable evidence, not transient thoughts:
+
+- session directory;
+- final dev/test scores;
+- best/merged node ids;
+- report path;
+- important caveats such as no B_test, timeout, failed search, or incomplete
+  executor run.
+---
+name: arbor-agent-tools
+description: "Deterministic helper layer for emulating Arbor tools in Codex or Claude Code when native TreeView, TreeAddNode, TreeSetMeta, RunExecutor, GitMergeBranch, or report tooling is unavailable. Use for local state management, eval score capture, executor prompt generation, merge checks, and skill forward tests."
+---
+
+# Arbor Agent Tools
+
+Use this skill when the host does not provide native Arbor tools. The bundled
+script stores state in the same style as open-source Arbor:
+
+```text
+<cwd>/.arbor/sessions/<run_name>/.coordinator/idea_tree.json
+<cwd>/.arbor/sessions/<run_name>/.coordinator/idea_tree.md
+```
+
+## Script
+
+`scripts/arbor_state.py` is stdlib-only.
+
+Common commands:
+
+```bash
+TOOLS="<skill-dir>/arbor-agent-tools/scripts/arbor_state.py"
+python "$TOOLS" init --cwd <project> --run-name <run> --task "<contract>"
+python "$TOOLS" view --cwd <project> --run-name <run> --format constraints
+python "$TOOLS" meta --cwd <project> --run-name <run> --set baseline_score=42 --set trunk_score=42
+python "$TOOLS" meta --cwd <project> --run-name <run> --set "eval_cmd=cd {cwd} && bash eval.sh"
+python "$TOOLS" add --cwd <project> --run-name <run> --parent-id ROOT --hypothesis "<four-line hypothesis>"
+python "$TOOLS" update --cwd <project> --run-name <run> --node-id 1 --status done --score 45 --insight "..."
+python "$TOOLS" worktree --cwd <project> --run-name <run> --node-id 1 --trunk <trunk_branch>
+python "$TOOLS" prompt-executor --cwd <project> --run-name <run> --node-id 1 --workdir <worktree>
+python "$TOOLS" prompt-executor --cwd <project> --run-name <run> --node-id 1 --smoke
+python "$TOOLS" eval --cwd <project> --run-name <run> --split dev --exec-cwd <worktree> --cmd "bash {cwd}/eval.sh" --set-meta trunk
+python "$TOOLS" record --cwd <project> --run-name <run> --node-id 1 --score 45 --insight "..." --result "..."
+python "$TOOLS" parse-log --log <project>/run.log --metric val_bpb
+python "$TOOLS" report --cwd <project> --run-name <run>
+python "$TOOLS" check --cwd <project> --run-name <run> --require-report --require-experiment --require-executor-prompt
+```
+
+Read `references/tool-mapping.md` when deciding which script command maps to a
+native Arbor tool.
+
+## State Rules
+
+- Keep scores absolute.
+- Keep eval commands templated with `{cwd}` and `{node_id}`.
+- Do not run B_test during executor iteration.
+- Use `record` for executor outcomes so artifacts and tree updates stay in
+  one place.
+- Use `check` before trusting a hand-edited tree. Add artifact flags such as
+  `--require-report`, `--require-experiment`, `--require-executor-prompt`,
+  `--require-events`, `--require-run-stats`, or `--strict-artifacts` when
+  validating a completed run.
+- Serialize tree-mutating commands for the same run. Do not parallelize
+  `init`, `meta`, `add`, `update`, `prune`, `propagate`, `eval`, `record`,
+  `worktree`, or `merge`.
+
+## Forward Testing
+
+For a smoke test, copy the target project to a disposable directory outside the
+Arbor repository, initialize a short run, record metadata, add one idea,
+generate an executor prompt, and run only cheap commands. Do not run full long
+training unless explicitly requested.
+
+Smoke-specific rules:
+
+- Use `prompt-executor --smoke`.
+- If a real eval command invokes training, data prep, downloads, GPU work, or a
+  minute-scale benchmark, do not execute it; store a cached-score parser,
+  harmless echo, or mocked score instead.
+- Parse existing logs with `parse-log`; it normalizes carriage-return progress
+  logs before extracting metrics. Avoid full `cat`, raw `rg`, raw `grep`, or
+  `tail` output; cap diagnostic log snippets at 20 lines.
+- Finish with `check` and `report` so the smoke produces a real `REPORT.md`.
+---
+name: arbor-agent-ideate
+description: "Strict IDEATE-stage skill for Arbor. Use immediately after TreeView(format=\"constraints\") when drafting Idea Tree nodes, enforcing the idea_drafting and first_principles_probe behavior, depth-aware idea levels, four-line TreeAddNode hypotheses, conflict checks, and self-filtering against shallow tweaks."
+---
+
+# Arbor Ideation Gate
+
+Load this only during IDEATE. The coordinator must first call
+`TreeView(format="constraints")`.
+
+After loading, write a brief visible progress note if useful:
+
+```text
+LOAD_RECEIPT: # SKILL: Idea Drafting
+```
+
+## Hard Sequence
+
+1. Read constraints: root insight, pruned lessons, validated findings, tree
+   shape, and sibling nodes.
+2. Run the Probe Block below before listing candidates.
+3. Generate candidates using all four idea moves.
+4. Apply depth-aware abstraction.
+5. Write a five-field scratch declaration for each survivor.
+6. Run the pre-submission self-check.
+7. Commit each survivor with `TreeAddNode` using exactly the four labelled
+   lines specified below.
+
+If any step is skipped, restart IDEATE.
+
+## Probe Block
+
+Answer all four questions with concrete evidence: failure case IDs, log lines,
+metrics, source references, or experiment reports.
+
+```text
+PROBE BLOCK
+Q1 First principles : <bottleneck CLASS> - evidence: <case ids / log refs>
+Q2 Hidden assumption: <assumption> - if dropped: <what opens up>
+Q3 Elephant         : <ugly problem the trunk currently ignores>
+Q4 Hamming          : <yes/no, plus one sentence justification>
+```
+
+Q1 must name a failure class, such as wrong retrieval, wrong reasoning over
+correct evidence, wrong stopping condition, wrong representation, wrong
+objective, wrong action space, or wrong credit assignment. If you cannot cite
+at least two concrete pieces of evidence, go back to OBSERVE.
+
+## Mindset
+
+- Think like a principal investigator, not an engineer filing a small PR.
+- Ask HOW, not HOW MUCH: change an algorithm, representation, objective,
+  control flow, data structure, or reasoning strategy.
+- Aim at a class-level bottleneck, not a single example.
+- Mechanism is a noun. "Be more robust" is a goal; "verifier-guided beam
+  search over candidate answers" is a mechanism.
+
+## Idea Generation Moves
+
+Use all four moves before selecting candidates:
+
+- **Assumption Inversion**: take the Q2 assumption and design a mechanism that
+  works when it is false.
+- **Backward From Success**: imagine the benchmark solved; identify missing
+  pipeline stages, state, or signals.
+- **Analogical Transfer**: borrow mechanisms from search, CSP/SAT, debate,
+  program synthesis, control theory, or scientific method.
+- **Failure-Case Reverse Engineering**: pick 2-3 failures and ask what minimal
+  capability would have caught them; cluster the answers.
+
+Apply a diversity rule: candidates must differ by assumption attacked,
+mechanism class, or analogy source. Drop duplicates.
+
+## Depth-Aware Level
+
+- **Depth 1**: broad strategy categories or paradigm shifts. These should read
+  like research directions, not implementation tickets.
+- **Depth 2+**: concrete algorithmic approaches within a parent direction.
+  These must be implementable by an executor in one experiment.
+
+If a depth-1 idea names implementation details, zoom out. If a depth-2 idea is
+only a theme, zoom in.
+
+## Candidate Declaration
+
+For each surviving candidate, write this scratch block in reasoning. Only
+fields 3 and 5 become part of the final node hypothesis.
+
+1. **Assumption challenged**: which Q2 assumption is dropped or replaced.
+2. **Mechanism class**: algorithm/method, data-representation,
+   search/retrieval, planning/control, verification/feedback, training/data,
+   orchestration, or a named new class.
+3. **Mechanism + Hypothesis chain**:
+   "We believe **X** helps because **Y**, and we will know it worked if **Z**."
+   X is the mechanism, Y is causal and tied to Q1, Z is observable on B_dev.
+4. **Orthogonality vs siblings**: name the axis that differs for each sibling.
+5. **Conflicts with prior insight**: cite pruned/root conflicts and explain
+   the counter, or write "none - attacks an axis no prior node touched".
+
+## Self-Check
+
+Kill or rewrite a candidate if any answer is yes:
+
+- Could it be expressed as a single number or config knob?
+- Is it only prompt rewording without a named prompting framework?
+- Is it "more X" without a new mechanism?
+- Does it state a goal instead of a mechanism?
+- Does it re-tread a pruned node without a specific counter?
+- Is it disconnected from the Probe Block?
+
+For performance-first MLE/Kaggle plugins, parameter tuning, prompt edits,
+ensembles, and scaling can be legitimate. In that mode, use
+`arbor-agent-plugins-hitl-budget` to decide which filters are relaxed, but
+still require evidence, scope, cost awareness, and non-duplicate ideas.
+
+## TreeAddNode Format
+
+Every committed `hypothesis` must contain exactly four labelled lines in this
+order:
+
+```text
+Mechanism: <X - the new component / pipeline stage / data structure>
+Hypothesis: <Y - causal story tied to the named bottleneck>
+Observable: <Z - score delta and/or qualitative shift on B_dev>
+Conflicts: <none - attacks an unexplored axis, OR pruned [<id>] said <X>; this counters via <Y>>
+```
+
+Do not include the scratch declaration, probe, self-check, or long rationale
+inside the tool call.
+---
+name: arbor-agent-executor
+description: "Executor-dispatch phase for Arbor. Use when implementing an Idea Tree node through RunExecutor or RunExecutorParallel semantics: isolated git worktree, executor prompt construction, eval metadata injection, RunTraining policy, smoke/full evaluation, report parsing, artifact persistence, tree update, and insight propagation."
+---
+
+# Arbor Executor
+
+Use this when a pending Idea Tree leaf is selected for implementation.
+
+## Dispatch Contract
+
+The executor receives:
+
+- Isolated worktree path and experiment branch.
+- Node id and exact hypothesis.
+- Evaluation info from tree metadata with `{cwd}` and `{node_id}` substituted.
+- Ancestor insights.
+- Additional context from the coordinator.
+
+The executor must implement the assigned idea faithfully. It may choose how to
+implement the idea, but it must not silently switch to a different direction.
+
+## Worktree Lifecycle
+
+Native `RunExecutor` does this automatically:
+
+1. Validate node exists and is `pending` or `running`.
+2. Enforce leaf-only dispatch when `max_tree_depth` is set.
+3. Mark node `running`.
+4. Create a git worktree from current trunk.
+5. Run the executor agent in that worktree.
+6. Finalize useful code changes with a commit.
+7. Snapshot plugin outputs such as `submission.csv` if configured.
+8. Remove the worktree but preserve the experiment branch.
+9. Parse the executor report.
+10. Update the node as `done` with `score`, `insight`, `result`, and
+    `code_ref`.
+11. Save experiment artifacts under `experiments/<node_id>/`.
+12. Propagate insights upward.
+
+When emulating manually, do the same sequence. Use `arbor-agent-tools` for
+prompt generation and tree updates.
+
+## Executor Workflow
+
+The executor follows this loop:
+
+1. **Understand**: read relevant files before editing.
+2. **Implement**: make the idea active in code.
+3. **Validate implementation**: run 2-3 small representative checks.
+4. **Iterate until solid**: fix bugs and integration misses before judging the
+   idea.
+5. **Evaluate**: run the full B_dev eval once implementation is credible.
+6. **Report**: include changes, baseline vs result, absolute score, and
+   insight.
+
+A bad score is useful only if the implementation was correct. Do not conclude
+an idea failed from broken code.
+
+## Evaluation Rules
+
+- Use B_dev only. Never run B_test during routine executor work.
+- Use the eval command injected from metadata. It should already target the
+  executor worktree after `{cwd}` substitution.
+- Save results to `results/<node_id>-<brief-description>/`.
+- Report absolute score, not delta.
+- If full eval is expensive, run smoke/subset checks first, then full eval
+  when code is correct.
+
+In smoke-only forward tests, the executor is not a real implementer. Do not
+edit source, create a real worktree, commit, run training, or run the real
+eval command. Generate a smoke prompt, save it as an artifact, and record a
+mocked or cached-score report that is clearly labelled as plumbing evidence
+only.
+
+## Long Commands
+
+Use `RunTraining` semantics for long training/eval commands:
+
+- Under 5 minutes: normal shell/Bash is acceptable.
+- 5 minutes or more: use `RunTraining` or the host equivalent with a generous
+  timeout.
+- Do not use `sleep && tail` polling loops.
+- If timeout occurs, inspect partial metrics, logs, checkpoints, and decide
+  whether to resume, reduce scope, debug, or report timeout as evidence.
+
+For MLE/Kaggle, estimate:
+
+```text
+estimated_time = epochs * sec_per_epoch * num_folds * 1.3
+```
+
+If it exceeds 70 percent of executor budget, scale down before continuing.
+
+## Report Schema
+
+The coordinator extracts:
+
+```json
+{
+  "score": 45.2,
+  "insight": "1-3 sentence key learning",
+  "result": "1-2 sentence factual outcome",
+  "code_ref": "experiment branch or null"
+}
+```
+
+Make the final report easy to parse:
+
+- **Idea**
+- **Changes**
+- **Implementation Choices**
+- **Baseline vs Result**
+- **Score**
+- **Analysis**
+- **Insights**
+
+## Parallel Dispatch
+
+Use parallel dispatch for 2-4 independent pending leaves. Do not parallelize
+GPU-heavy or mutually competing experiments unless budget permits. Validate all
+nodes before launching. Respect human review gates and cycle caps.
+
+## Manual Emulation
+
+If native `RunExecutor` is unavailable:
+
+1. Create a worktree/branch or copy the repo if worktrees are unsafe.
+2. Generate the prompt from the main session while substituting the executor
+   worktree as `{cwd}`:
+   ```bash
+   python <tools>/arbor_state.py prompt-executor --cwd <project> --run-name <run> \
+     --node-id <id> --workdir <worktree> \
+     --output <project>/.arbor/sessions/<run>/experiments/<id>/executor_prompt.md
+   ```
+   For smoke/forward tests, add `--smoke` and include smoke-only additional
+   context.
+3. Launch a fresh agent in that worktree with the generated prompt.
+4. Run B_dev from the worktree. With the fallback helper, keep session state
+   in `<project>` and run the command in `<worktree>`:
+   ```bash
+   python <tools>/arbor_state.py eval --cwd <project> --run-name <run> \
+     --split dev --exec-cwd <worktree> --cmd "<eval_cmd>" --node-id <id>
+   ```
+5. Capture the executor report. Before calling `record --report-file`, create
+   the referenced report file. If no file exists yet, pass the report body with
+   `--raw-report` instead.
+6. Record outcome:
+   ```bash
+   python <tools>/arbor_state.py record --cwd <project> --run-name <run> \
+     --node-id <id> --score <score> --insight "<insight>" \
+     --result "<result>" --code-ref <branch>
+   ```
+7. Run `propagate` or manually update parent/root insights.
+
+For smoke/forward tests, skip worktree creation, source edits, fresh agent
+launch, and B_dev execution. Save the generated prompt under
+`experiments/<node_id>/`, then use `record` with a cached or mocked report.
+---
+name: arbor-agent-merge-eval
+description: "Merge and evaluation discipline for Arbor. Use for TreeSetMeta metadata, B_dev/B_test separation, eval command templates, score parsing, GitMergeBranch behavior, protected paths, required outputs, metric_direction, trunk/test score updates, medal detection, and final evaluation before stopping."
+---
+
+# Arbor Merge And Eval
+
+Use this whenever scores, metadata, merge decisions, or final validation are
+involved.
+
+## Dataset Discipline
+
+- B_dev is for routine iteration, executor experiments, score tracking, and
+  idea selection.
+- B_test is for milestone checks only: before merging a branch and at final
+  report time.
+- If B_test diverges from B_dev, do not hand-wave it. Investigate overfitting,
+  noise, data split mismatch, or eval contamination.
+
+## Tree Metadata
+
+Persist evaluation metadata early and update it after merges:
+
+- `baseline_score`: unmodified B_dev score.
+- `trunk_score`: current trunk B_dev score.
+- `test_baseline_score`: unmodified B_test score.
+- `test_trunk_score`: current trunk B_test score.
+- `eval_cmd`: B_dev command.
+- `eval_cmd_test`: B_test command.
+- `eval_timeout`, `eval_retries`, `eval_retry_base_delay`,
+  `eval_retry_max_delay`.
+- `dataset_info`: paths and split descriptions.
+- `metric_direction`: `maximize` or `minimize`.
+- `trunk_branch`: non-protected branch that receives verified merges.
+- `submission_path`, `sample_submission_path`.
+
+Use `{cwd}` and `{node_id}` placeholders. Example:
+
+```text
+cd {cwd} && uv run python run_eval.py --split dev --run-name {node_id}
+```
+
+## Score Semantics
+
+- Tree node `score` is an absolute B_dev metric value.
+- Merge verification uses B_test.
+- `metric_direction` controls improvement:
+  - maximize: higher is better.
+  - minimize: lower is better.
+- Do not compare deltas with absolutes.
+- If output has JSON with `score`, prefer it. Otherwise extract the primary
+  metric from text (`primary_score`, `score`, `accuracy`, `acc`, etc.).
+
+## Merge Procedure
+
+Native `GitMergeBranch`:
+
+1. Refuses target `main` or `master`.
+2. Resolves target to configured `trunk_branch`. `main`/`master` are base
+   branches, not merge targets.
+3. Creates an isolated worktree at `source_branch`.
+4. Runs `eval_cmd_test` with `{cwd}` and `{node_id}` substituted.
+5. Retries transient failures if configured.
+6. Extracts verified B_test score.
+7. Rejects the merge if B_test does not improve over `test_trunk_score` or
+   `test_baseline_score`.
+8. Checks plugin protected paths and required outputs.
+9. Merges source into trunk with `--no-ff`.
+10. Reports the verified test score and instructs the coordinator to update
+    tree metadata and node status.
+
+After success:
+
+- `TreeSetMeta(test_trunk_score=<verified score>)`.
+- If needed, re-run B_dev on trunk and `TreeSetMeta(trunk_score=<dev score>)`.
+- `TreeUpdateNode(node_id=<id>, status="merged")`.
+
+## Protected Paths And Required Outputs
+
+For plugins such as MLE/Kaggle:
+
+- Reject branches modifying protected globs such as `data/**`, `private/**`,
+  or `evaluation/**`.
+- Reject merge if required outputs such as `submission.csv` do not exist on
+  the branch.
+- Snapshot outputs in the workspace so finalization can recover the best one.
+
+## Merge Threshold
+
+`merge_threshold` is a soft coordinator guideline, not a substitute for B_test.
+A small improvement can merge when performance-first mode says every gain
+counts and B_test verifies it. A large B_dev improvement must still be rejected
+if B_test fails.
+
+## Final Stop
+
+Before stopping:
+
+1. Ensure the best available branch is either merged or explicitly rejected.
+2. Run final B_test on trunk only if it is available, contract-authorized, and
+   the run is not smoke-only.
+3. Record `test_trunk_score`.
+4. If `test_baseline_score` is missing and a baseline test run is feasible,
+   record it.
+5. Hand off to `arbor-agent-resume-report`.
+
+For smoke/forward tests, do not run B_test or merge verification unless the
+user explicitly requested a real run. Record `test_trunk_score` as unavailable,
+state that no separate B_test was used, run `arbor_state.py check`, and hand
+off to report generation.
+
+## Manual Emulation
+
+If native `GitMergeBranch` is unavailable, use `arbor-agent-tools`:
+
+```bash
+python <tools>/arbor_state.py eval --cwd <project> --run-name <run> \
+  --split dev --cmd "<eval_cmd>" --set-meta baseline
+
+python <tools>/arbor_state.py meta --cwd <project> --run-name <run> \
+  --set "trunk_branch=<trunk_branch>"
+
+python <tools>/arbor_state.py merge --cwd <project> --run-name <run> \
+  --source-branch <branch> --node-id <id>
+```
+
+Pass `--target-branch <trunk_branch>` explicitly only when metadata is not set.
+If a manual merge would touch live work, prefer `--dry-run` first.
+---
+name: arbor-agent-plugins-hitl-budget
+description: "Domain adaptation, human-in-the-loop, and budget policy phase for Arbor. Use when a run mentions plugins, plugin profiles, mle_kaggle, eval_contract, protected_paths, required_outputs, lifecycle hooks, convergence, budget_policy, RunTraining stages, AskUser, or interaction modes auto/direction/review/collaborative."
+---
+
+# Arbor Plugins, HITL, And Budget
+
+Use this when run behavior is modified by configuration rather than by code.
+
+## Plugin Contract
+
+A plugin is a YAML domain adapter. It can define:
+
+- Prompt injections:
+  `meta_preamble_inject`, `meta_init_inject`, `meta_ideate_inject`,
+  `meta_decide_inject`, `sub_preamble_inject`, `sub_workflow_inject`.
+- `eval_contract`: prefilled metadata such as `metric_direction`, `eval_cmd`,
+  `submission_path`, and `sample_submission_path`.
+- `protected_paths`: globs a branch must not modify.
+- `required_outputs`: files that must exist for merge.
+- `config_overrides` and named `profiles`.
+- `lifecycle_hooks`: `on_workspace_setup`, `after_executor`,
+  `on_finalize`.
+- `convergence`: early stop policy.
+
+Plugin precedence:
+
+```text
+defaults < plugin.config_overrides < active profile < project YAML < CLI
+```
+
+## MLE/Kaggle Mode
+
+The built-in `mle_kaggle` plugin is performance-first:
+
+- Novelty has zero value; only metric improvement matters.
+- `skills_enabled` may be disabled for strict idea drafting because
+  parameter tuning, prompt edits, feature engineering, ensembling, and
+  scaling can be valid.
+- A valid `submission.csv` is a first-class artifact.
+- Data/eval directories are protected.
+- Merge requires required outputs and verified score.
+
+Priority:
+
+1. Produce and evaluate a valid baseline submission.
+2. Establish robust validation.
+3. Explore diverse approach families.
+4. Refine promising families.
+5. Ensemble/blend diverse winners.
+6. Reserve finalization time for best submission recovery.
+
+## Budget Policy
+
+Default Arbor behavior favors long real experiments. Do not invent staged
+budgets unless configured.
+
+If `budget_policy.stages` exists, use configured stages such as `smoke`,
+`pilot`, and `full` with `RunTraining(budget_stage=...)`.
+
+If `require_cost_estimate` is true, every idea needs:
+
+- estimated wall time;
+- minimal smoke test;
+- promotion gate from cheap to expensive fidelity.
+
+Do not launch a new executor when remaining budget cannot cover the executor
+plus finalization buffer.
+
+## Plateau And Convergence
+
+When repeated siblings under a parent fail to improve:
+
+- Stop expanding that parent.
+- Summarize the failure class in the parent insight.
+- Switch to Combine or Leap:
+  - **Exploit**: refine current best pipeline.
+  - **Combine**: ensemble/blend diverse candidates.
+  - **Leap**: use a fundamentally different approach family.
+
+If convergence policy emits a stop signal, finalize instead of starting new
+experiments.
+
+## Human Interaction Modes
+
+- `auto`: no routine human gates.
+- `direction`: after `TreeView(format="constraints")`, ask the user for a
+  direction before adding ideas.
+- `review`: pause before `TreeAddNode` commits and before executor dispatch.
+- `collaborative`: both direction and review.
+
+Use `AskUser` only when genuinely blocked, or when interaction mode requires
+it. If timeout occurs, proceed on a stated assumption.
+
+Respect review outcomes:
+
+- approved: continue;
+- skipped: do not re-add or dispatch the idea;
+- edited: continue from the revised hypothesis or review note.
+
+## Lifecycle Hooks
+
+- `on_workspace_setup`: run once before INIT.
+- `after_executor`: snapshot plugin outputs such as `submission.csv` into the
+  session `submissions/` directory.
+- `on_finalize`: run once after STOP or emergency timeout.
+
+Hook scripts run from the project cwd. Do not inline arbitrary shell in a
+plugin; use script files.
+
+## Skill Behavior
+
+If a plugin disables strict skills, do not force `arbor-agent-ideate`'s
+scientific anti-tweak filter. Still require:
+
+- constraints first;
+- evidence-grounded ideas;
+- depth-appropriate tree nodes;
+- cost awareness;
+- no duplicate siblings;
+- clear observable on B_dev.
+
+codex
+The run contract is already explicit: real single-cycle continuation, auto mode, B_dev-only iteration, and B_test only for a merge-ready dev winner. I’m now loading the durable tree and reconciling any interrupted executor state before selecting work.
+exec
+/usr/bin/zsh -lc 'python /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py check --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 && python /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py view --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --format full' in /home/ghost/projects/aegis-router
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/usr/bin/zsh -lc 'pwd && git branch --show-current && git status --short && git worktree list --porcelain' in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+/home/ghost/projects/aegis-router
+main
+ M scripts/refine_edge_multiscenario.py
+?? .arbor/
+?? deploy/
+?? docs/ARBOR_DAEMON.md
+?? results/
+?? scripts/arbor_daemon.sh
+?? scripts/arbor_daemon_prompt.md
+worktree /home/ghost/projects/aegis-router
+HEAD 1c9ea3050ccb69de3fc40dde73877d13f9238618
+branch refs/heads/main
+
+worktree /tmp/arbor-worktrees-1000/coordinator__n6-mechanism-adversarial-domain-ran-0a7b855f
+HEAD 1146f2230aca3854ba095a30e9456826fed49a29
+branch refs/heads/coordinator/n6-mechanism-adversarial-domain-ran-0a7b855f
+prunable gitdir file points to non-existent location
+
+
+exec
+/usr/bin/zsh -lc "find .arbor/sessions/aegis-router-20260621 -maxdepth 3 -type f -printf '%P\\n' | sort && ps -eo pid,ppid,stat,etime,cmd | rg 'aegis-router|arbor|evaluate|benchmark' | head -80" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+.coordinator/.state.lock
+.coordinator/checkpoint.json
+.coordinator/idea_tree.json
+.coordinator/idea_tree.md
+REPORT.md
+__pycache__/benchmark_eval.cpython-314.pyc
+benchmark_eval.py
+benchmark_state/state_c1_s20260629.json
+benchmark_state/state_c1_s20260630.json
+benchmark_state/state_c1_s20260631.json
+benchmark_state/state_c1_s20270629.json
+benchmark_state/state_c1_s20270630.json
+benchmark_state/state_c1_s20270631.json
+benchmark_state/state_c1_s21260632.json
+benchmark_state/state_c1_s21260633.json
+benchmark_state/state_c1_s21260634.json
+benchmark_state/state_c1_s22260635.json
+benchmark_state/state_c1_s22260636.json
+benchmark_state/state_c1_s22260637.json
+benchmark_state/state_c1_s23260638.json
+benchmark_state/state_c1_s23260639.json
+benchmark_state/state_c1_s23260640.json
+benchmark_state/state_c1_s24260641.json
+benchmark_state/state_c1_s24260642.json
+benchmark_state/state_c1_s24260643.json
+events.jsonl
+experiments/1/executor_prompt.md
+experiments/1/metrics.json
+experiments/1/report.md
+experiments/10/executor_prompt.md
+experiments/10/metrics.json
+experiments/10/report.md
+experiments/3/executor_prompt.md
+experiments/3/metrics.json
+experiments/3/report.md
+experiments/4/dev-benchmark-v1.json
+experiments/4/dev-benchmark.json
+experiments/4/executor_prompt.md
+experiments/4/metrics.json
+experiments/4/report.md
+experiments/5/executor_prompt.md
+experiments/5/metrics.json
+experiments/5/report.md
+experiments/6/executor_prompt.md
+experiments/6/metrics.json
+experiments/6/report.md
+experiments/7/executor_prompt.md
+experiments/7/metrics.json
+experiments/7/report.md
+experiments/8/executor_prompt.md
+experiments/8/metrics.json
+experiments/8/report.md
+experiments/9/executor_prompt.md
+experiments/9/metrics.json
+experiments/9/report.md
+run_stats.json
+      1       0 Ss         00:00 bwrap --new-session --die-with-parent --ro-bind / / --dev /dev --bind /tmp /tmp --perms 555 --tmpfs /tmp/.git --remount-ro /tmp/.git --perms 555 --tmpfs /tmp/.agents --remount-ro /tmp/.agents --perms 555 --tmpfs /tmp/.codex --remount-ro /tmp/.codex --bind /home/ghost/projects/aegis-router /home/ghost/projects/aegis-router --ro-bind /home/ghost/projects/aegis-router/.git /home/ghost/projects/aegis-router/.git --perms 555 --tmpfs /home/ghost/projects/aegis-router/.agents --remount-ro /home/ghost/projects/aegis-router/.agents --perms 555 --tmpfs /home/ghost/projects/aegis-router/.codex --remount-ro /home/ghost/projects/aegis-router/.codex --unshare-user --unshare-pid --unshare-net --proc /proc --argv0 codex-linux-sandbox -- /home/ghost/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex --sandbox-policy-cwd /home/ghost/projects/aegis-router --command-cwd /home/ghost/projects/aegis-router --permission-profile {"type":"managed","file_system":{"type":"restricted","entries":[{"path":{"type":"special","value":{"kind":"root"}},"access":"read"},{"path":{"type":"path","path":"/home/ghost/projects/aegis-router"},"access":"write"},{"path":{"type":"special","value":{"kind":"slash_tmp"}},"access":"write"},{"path":{"type":"special","value":{"kind":"tmpdir"}},"access":"write"},{"path":{"type":"path","path":"/home/ghost/projects/aegis-router/.git"},"access":"read"},{"path":{"type":"path","path":"/home/ghost/projects/aegis-router/.agents"},"access":"read"},{"path":{"type":"path","path":"/home/ghost/projects/aegis-router/.codex"},"access":"read"}]},"network":"restricted"} --apply-seccomp-then-exec -- /usr/bin/zsh -c __CODEX_SNAPSHOT_OVERRIDE_SET_0="${CODEX_THREAD_ID+x}" __CODEX_SNAPSHOT_OVERRIDE_0="${CODEX_THREAD_ID-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0="${ALL_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_0="${ALL_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1="${BUNDLE_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_1="${BUNDLE_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2="${BUNDLE_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_2="${BUNDLE_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3="${BUNDLE_NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_3="${BUNDLE_NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4="${BUNDLE_SSL_CA_CERT+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_4="${BUNDLE_SSL_CA_CERT-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5="${CODEX_CA_CERTIFICATE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_5="${CODEX_CA_CERTIFICATE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6="${CODEX_NETWORK_ALLOW_LOCAL_BINDING+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_6="${CODEX_NETWORK_ALLOW_LOCAL_BINDING-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7="${CODEX_NETWORK_PROXY_ACTIVE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_7="${CODEX_NETWORK_PROXY_ACTIVE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8="${CURL_CA_BUNDLE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_8="${CURL_CA_BUNDLE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9="${DOCKER_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_9="${DOCKER_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10="${DOCKER_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_10="${DOCKER_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11="${ELECTRON_GET_USE_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_11="${ELECTRON_GET_USE_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12="${FTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_12="${FTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13="${GIT_SSL_CAINFO+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_13="${GIT_SSL_CAINFO-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14="${HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_14="${HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15="${HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_15="${HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16="${NODE_EXTRA_CA_CERTS+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_16="${NODE_EXTRA_CA_CERTS-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17="${NODE_USE_ENV_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_17="${NODE_USE_ENV_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18="${NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_18="${NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19="${NPM_CONFIG_CAFILE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_19="${NPM_CONFIG_CAFILE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20="${NPM_CONFIG_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_20="${NPM_CONFIG_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21="${NPM_CONFIG_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_21="${NPM_CONFIG_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22="${NPM_CONFIG_NOPROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_22="${NPM_CONFIG_NOPROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23="${NPM_CONFIG_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_23="${NPM_CONFIG_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24="${PIP_CERT+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_24="${PIP_CERT-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25="${PIP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_25="${PIP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26="${REQUESTS_CA_BUNDLE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_26="${REQUESTS_CA_BUNDLE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27="${SSL_CERT_FILE+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_27="${SSL_CERT_FILE-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28="${WSS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_28="${WSS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29="${WS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_29="${WS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30="${YARN_HTTPS_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_30="${YARN_HTTPS_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31="${YARN_HTTP_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_31="${YARN_HTTP_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32="${YARN_NO_PROXY+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_32="${YARN_NO_PROXY-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33="${all_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_33="${all_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34="${ftp_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_34="${ftp_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35="${http_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_35="${http_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36="${https_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_36="${https_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37="${no_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_37="${no_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38="${npm_config_cafile+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_38="${npm_config_cafile-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39="${npm_config_http_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_39="${npm_config_http_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40="${npm_config_https_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_40="${npm_config_https_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41="${npm_config_noproxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_41="${npm_config_noproxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42="${npm_config_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_42="${npm_config_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43="${ws_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_43="${ws_proxy-}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44="${wss_proxy+x}" __CODEX_SNAPSHOT_PROXY_OVERRIDE_44="${wss_proxy-}" __CODEX_SNAPSHOT_PROXY_ENV_SET="${CODEX_NETWORK_PROXY_ACTIVE+x}"  if . '/home/ghost/.codex/shell_snapshots/019ef07e-a8f5-7ef0-9145-f7ba3d63fb67.1782151293192602358.sh' >/dev/null 2>&1; then :; fi  if [ -n "${__CODEX_SNAPSHOT_OVERRIDE_SET_0}" ]; then export CODEX_THREAD_ID="${__CODEX_SNAPSHOT_OVERRIDE_0}"; else unset CODEX_THREAD_ID; fi if [ -n "$__CODEX_SNAPSHOT_PROXY_ENV_SET" ] || [ -n "${CODEX_NETWORK_PROXY_ACTIVE+x}" ]; then if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_0}" ]; then export ALL_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_0}"; else unset ALL_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_1}" ]; then export BUNDLE_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_1}"; else unset BUNDLE_HTTPS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_2}" ]; then export BUNDLE_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_2}"; else unset BUNDLE_HTTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_3}" ]; then export BUNDLE_NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_3}"; else unset BUNDLE_NO_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_4}" ]; then export BUNDLE_SSL_CA_CERT="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_4}"; else unset BUNDLE_SSL_CA_CERT; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_5}" ]; then export CODEX_CA_CERTIFICATE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_5}"; else unset CODEX_CA_CERTIFICATE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_6}" ]; then export CODEX_NETWORK_ALLOW_LOCAL_BINDING="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_6}"; else unset CODEX_NETWORK_ALLOW_LOCAL_BINDING; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_7}" ]; then export CODEX_NETWORK_PROXY_ACTIVE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_7}"; else unset CODEX_NETWORK_PROXY_ACTIVE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_8}" ]; then export CURL_CA_BUNDLE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_8}"; else unset CURL_CA_BUNDLE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_9}" ]; then export DOCKER_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_9}"; else unset DOCKER_HTTPS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_10}" ]; then export DOCKER_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_10}"; else unset DOCKER_HTTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_11}" ]; then export ELECTRON_GET_USE_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_11}"; else unset ELECTRON_GET_USE_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_12}" ]; then export FTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_12}"; else unset FTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_13}" ]; then export GIT_SSL_CAINFO="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_13}"; else unset GIT_SSL_CAINFO; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_14}" ]; then export HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_14}"; else unset HTTPS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_15}" ]; then export HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_15}"; else unset HTTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_16}" ]; then export NODE_EXTRA_CA_CERTS="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_16}"; else unset NODE_EXTRA_CA_CERTS; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_17}" ]; then export NODE_USE_ENV_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_17}"; else unset NODE_USE_ENV_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_18}" ]; then export NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_18}"; else unset NO_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_19}" ]; then export NPM_CONFIG_CAFILE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_19}"; else unset NPM_CONFIG_CAFILE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_20}" ]; then export NPM_CONFIG_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_20}"; else unset NPM_CONFIG_HTTPS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_21}" ]; then export NPM_CONFIG_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_21}"; else unset NPM_CONFIG_HTTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_22}" ]; then export NPM_CONFIG_NOPROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_22}"; else unset NPM_CONFIG_NOPROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_23}" ]; then export NPM_CONFIG_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_23}"; else unset NPM_CONFIG_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_24}" ]; then export PIP_CERT="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_24}"; else unset PIP_CERT; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_25}" ]; then export PIP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_25}"; else unset PIP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_26}" ]; then export REQUESTS_CA_BUNDLE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_26}"; else unset REQUESTS_CA_BUNDLE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_27}" ]; then export SSL_CERT_FILE="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_27}"; else unset SSL_CERT_FILE; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_28}" ]; then export WSS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_28}"; else unset WSS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_29}" ]; then export WS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_29}"; else unset WS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_30}" ]; then export YARN_HTTPS_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_30}"; else unset YARN_HTTPS_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_31}" ]; then export YARN_HTTP_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_31}"; else unset YARN_HTTP_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_32}" ]; then export YARN_NO_PROXY="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_32}"; else unset YARN_NO_PROXY; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_33}" ]; then export all_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_33}"; else unset all_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_34}" ]; then export ftp_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_34}"; else unset ftp_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_35}" ]; then export http_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_35}"; else unset http_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_36}" ]; then export https_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_36}"; else unset https_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_37}" ]; then export no_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_37}"; else unset no_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_38}" ]; then export npm_config_cafile="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_38}"; else unset npm_config_cafile; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_39}" ]; then export npm_config_http_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_39}"; else unset npm_config_http_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_40}" ]; then export npm_config_https_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_40}"; else unset npm_config_https_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_41}" ]; then export npm_config_noproxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_41}"; else unset npm_config_noproxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_42}" ]; then export npm_config_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_42}"; else unset npm_config_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_43}" ]; then export ws_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_43}"; else unset ws_proxy; fi if [ -n "${__CODEX_SNAPSHOT_PROXY_OVERRIDE_SET_44}" ]; then export wss_proxy="${__CODEX_SNAPSHOT_PROXY_OVERRIDE_44}"; else unset wss_proxy; fi fi if [ -n "${PATH:-}" ]; then export PATH='/home/ghost/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path':"$PATH"; else export PATH='/home/ghost/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path'; fi  exec '/usr/bin/zsh' -c 'find .arbor/sessions/aegis-router-20260621 -maxdepth 3 -type f -printf '"'"'%P\n'"'"' | sort && ps -eo pid,ppid,stat,etime,cmd | rg '"'"'aegis-router|arbor|evaluate|benchmark'"'"' | head -80'
+      2       1 S          00:00 /usr/bin/zsh -c find .arbor/sessions/aegis-router-20260621 -maxdepth 3 -type f -printf '%P\n' | sort && ps -eo pid,ppid,stat,etime,cmd | rg 'aegis-router|arbor|evaluate|benchmark' | head -80
+      7       2 S          00:00 rg aegis-router|arbor|evaluate|benchmark
+
+exec
+/usr/bin/zsh -lc "jq '{metadata, nodes: [.nodes[] | {id,parent_id,status,score,code_ref,hypothesis,insight,result}]}' .arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.json && jq . .arbor/sessions/aegis-router-20260621/.coordinator/checkpoint.json" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+{
+  "metadata": null,
+  "nodes": [
+    {
+      "id": "ROOT",
+      "parent_id": null,
+      "status": "done",
+      "score": null,
+      "code_ref": null,
+      "hypothesis": "Optimize Aegis Router routing logic for adversarial dynamic networks. Maximize delivery, minimize sybil_touch_ratio, packet loss, latency, and route length; generalize across unseen seeds/scenarios; keep tests, benchmark, and metric formulas untouched; protect B_test and preserve APIs. Build a fixed dev/test benchmark for stealth Sybils, churn, congestion, and multiple graph sizes/densities before deeper optimization.",
+      "insight": "Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.",
+      "result": null
+    },
+    {
+      "id": "1",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6959375149744956,
+      "code_ref": null,
+      "hypothesis": "Mechanism: CVaR tail-risk scorer over fixed scenario windows\nHypothesis: optimize the lower tail of delivery and the upper tail of Sybil exposure across the fixed dev scenarios so the router stops overfitting lucky seeds and improves worst-case robustness without changing the benchmark or metric formulas.\nObservable: higher dev robust_score, lower max_sybil, and smaller score variance across seeds.\nConflicts: none - attacks the objective aggregation axis rather than local link tuning.",
+      "insight": "La sélection CVaR sur dev trouve un profil performant localement, mais son score held-out chute fortement; les cinq scénarios dev ne couvrent pas assez le régime Sybil à 15%.\n[Pruned: Surapprentissage dev: B_test 0.340566 très inférieur au trunk validé 0.424291.]",
+      "result": "B_dev 0.695938 > trunk 0.684530, mais B_test 0.340566 < trunk 0.424291; profil rejeté et non promu."
+    },
+    {
+      "id": "2",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": null,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Latent hazard filter for nodes and edges\nHypothesis: maintain a hidden risk belief per node and per directed edge inferred from delayed loss, churn, and queue signals so the router can anticipate stealth Sybil behavior before repeated failures and cut sybil_touch_ratio on unseen seeds.\nObservable: fewer Sybil touches and link-loss drops on held-out seeds with similar delivery.\nConflicts: none - attacks representation and inference rather than heuristic weighting.",
+      "insight": "[Pruned: Regression on the fixed dev/test benchmark: robust score dropped from 0.6356 to 0.5855 on dev and from 0.3000 to 0.2866 on test, so the latent-hazard formulation is not a net win in its current form.]",
+      "result": null
+    },
+    {
+      "id": "3",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6874925765035899,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Pheromone-repulsion memory with fast decay\nHypothesis: reinforce successful edges like ant pheromones, but decay them quickly after delayed drops or Sybil hits and add a local repulsion field around recently bad nodes so the router avoids deceptive hubs under churn.\nObservable: lower average hops and latency, fewer loops, and stable delivery on sparse graphs.\nConflicts: none - attacks path memory and exploration policy rather than the benchmark.",
+      "insight": "Une faible mémoire positive d'arêtes avec répulsion courte améliore légèrement B_dev, mais le gain ne généralise pas au held-out; la rétroaction limitée au dernier saut réduit probablement la qualité du crédit causal.\n[Pruned: Le gain dev ne se généralise pas: B_test 0.422692 inférieur au trunk 0.424291.]",
+      "result": "B_dev 0.687493 > trunk 0.684530, mais B_test 0.422692 < trunk 0.424291; candidat rejeté sans fusion."
+    },
+    {
+      "id": "4",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6669743086973007,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Two-profile bandit selector over edge routing policies\nHypothesis: switch between the delivery-heavy and security-heavy edge profiles using recent packet outcomes and local churn/sybil pressure so mixed scenarios can get the best of both behaviors instead of averaging them away.\nObservable: higher robust_score on the fixed dev suite and lower max_sybil on the held-out stress scenario without changing any benchmark code.\nConflicts: none - attacks runtime policy selection rather than per-edge scoring.",
+      "insight": "Le sélecteur contextuel à deux profils améliore le baseline mais ne dépasse pas le profil sécurité fixe; le coût d'apprentissage et les commutations n'apportent pas de gain robuste sur ce dev fixe.\n[Pruned: Dev score 0.666974 inférieur au trunk 0.684530; pas de justification pour exposer B_test ou fusionner.]",
+      "result": "B_dev 0.666974, livraison 0.604883, sybil moyen 0.123055, max_sybil 0.141421; inférieur au trunk 0.684530. B_test non exécuté."
+    },
+    {
+      "id": "5",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6816484915899128,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Path-level eligibility traces for delayed routing feedback\nHypothesis: distribute terminal delivery, drop, loop, and Sybil feedback backward across the actual packet path with decaying eligibility so earlier deceptive edges receive causal credit instead of blaming only the final hop.\nObservable: higher B_dev robust_score with lower Sybil exposure and fewer repeated bad-route failures, especially on sparse scenarios.\nConflicts: pruned [3] found last-hop pheromone credit did not generalize; this counters it by assigning delayed outcomes across the full traversed path.",
+      "insight": "Le crédit sur chemin complet fonctionne mais attribue trop largement le signal terminal; il réduit légèrement Sybil au prix de livraison. Une attribution conditionnelle par cause serait nécessaire.\n[Pruned: B_dev 0.681648 inférieur au trunk 0.684530; pas de validation B_test.]",
+      "result": "B_dev 0.681648, inférieur au trunk 0.684530; B_test non exécuté."
+    },
+    {
+      "id": "6",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.674405,
+      "code_ref": "coordinator/n6-mechanism-adversarial-domain-ran-0a7b855f",
+      "hypothesis": "Mechanism: Adversarial domain-randomized learning curriculum\nHypothesis: train persistent edge memory across procedurally varied Sybil ratios, stealth, churn, congestion, graph sizes, and densities before evaluation so the learned state represents invariant risk signals rather than the five fixed dev regimes.\nObservable: maintain or improve B_dev robust_score while reducing variance across dev scenarios and avoiding the high-pressure collapse seen in prior held-out checks.\nConflicts: pruned [1] overfit fixed dev scenario ranking; this counters it through broader training distributions while leaving the official benchmark and protected test untouched.",
+      "insight": "La randomisation de domaine apporte un vrai transfert et réduit fortement l'exposition Sybil par rapport à son contrôle, mais les statistiques contextuelles restent trop grossières et réduisent la livraison.\n[Pruned: B_dev 0.674405 inférieur au trunk 0.684530; branche conservée comme preuve mais non fusionnée.]",
+      "result": "B_dev 0.674405, inférieur au trunk 0.684530; amélioration de 0.031641 face au contrôle; B_test non exécuté."
+    },
+    {
+      "id": "7",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6870040996217148,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Concentration-aware route diversification with local structural suspicion\nHypothesis: penalize repeated dependence on the same transit nodes and edges while using only observable local topology and outcome history to spread traffic across structurally independent routes, reducing the chance that one deceptive Sybil hub captures many packets.\nObservable: lower B_dev max_sybil and route concentration without materially increasing hops, latency, or packet loss.\nConflicts: pruned [2] used a latent hazard belief and regressed; this counters via explicit route concentration and observable structural diversity rather than hidden-risk inference.",
+      "insight": "Light route concentration penalties improved fixed B_dev but regressed held-out high-Sybil delivery; unconditional global usage penalties do not generalize. Future diversification needs a stronger local viability or congestion gate.\n[Pruned: B_test regression: 0.387203 below validated trunk 0.424291 after B_dev improvement; candidate code removed from active checkout.]",
+      "result": "B_dev 0.687004 exceeded trunk 0.684530, but one merge-verification B_test scored 0.387203 below trunk 0.424291; rejected without merge."
+    },
+    {
+      "id": "8",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6828301562815761,
+      "code_ref": null,
+      "hypothesis": "Mechanism: Viability-shielded routing with a control-barrier action filter\nHypothesis: Filter high-risk neighbors only when at least one locally viable alternative preserves destination progress, queue headroom, and bounded projected loss, so security pressure cannot remove the last delivery-capable action as unconditional penalties did.\nObservable: B_dev robust_score exceeds 0.684530 while delivery stays near trunk and max Sybil exposure falls without materially increasing hops or latency.\nConflicts: pruned [7] said unconditional concentration penalties over-diversify and pruned [6] said coarse risk penalties reduce delivery; this counters via a per-decision viability shield that leaves baseline ranking unchanged when no safe alternative exists.",
+      "insight": "A local viability proof prevents catastrophic over-filtering, but hard edge deletion has a narrow operating range: conservative gating nearly matches trunk without exceeding it, while broader gating collapses delivery.\n[Pruned: B_dev 0.682830 did not exceed validated trunk 0.684530; B_test not authorized for a losing candidate.]",
+      "result": "Implemented and validated an optional directional viability shield in an isolated executor copy; B_dev scored 0.6828301562815761, below trunk by 0.001699944262713137. B_test was not run."
+    },
+    {
+      "id": "9",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.666964541596115,
+      "code_ref": "/tmp/aegis-arbor-node9-cycle9-20260622",
+      "hypothesis": "Mechanism: Cause-specific feedback router with competing delivery and adversary evidence channels\nHypothesis: Separate congestion, link-loss, loop, and observed-Sybil evidence before updating edge preferences, because the shared badness signal currently confuses recoverable congestion with adversarial risk and suppresses useful delivery routes.\nObservable: B_dev robust_score and delivery improve together, with fewer repeated Sybil touches and no regression in congested low-Sybil scenarios.\nConflicts: pruned [5] said uniform path credit assigns terminal signals too broadly; this counters by factorizing feedback by observable failure cause before any routing penalty is applied.",
+      "insight": "Cause-specific bounded reranking on the exact v3 profile reduced mean/max Sybil exposure to 0.119608/0.138731, but delivery fell to 0.596254; factorized penalties still over-suppress useful routes unless confidence or context can distinguish causal adversary evidence. [Pruned: B_dev 0.666965 below validated trunk 0.684530; B_test not run.]",
+      "result": "B_dev 0.666964541596115, below validated trunk 0.6845301005442892; B_test not run; candidate retained only in isolated executor copy."
+    },
+    {
+      "id": "10",
+      "parent_id": "ROOT",
+      "status": "pruned",
+      "score": 0.6933176702330417,
+      "code_ref": "dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea at /tmp/aegis-arbor-node10-cycle10-20260622",
+      "hypothesis": "Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage\nHypothesis: Shrink sparse edge failure evidence toward a neutral prior and apply learned penalties only as posterior confidence grows, so stochastic early drops cannot permanently suppress delivery-capable routes while repeated adversarial outcomes still accumulate decisive evidence.\nObservable: B_dev robust_score exceeds 0.684530 with delivery preserved near trunk and mean/max Sybil exposure no worse than trunk across the fixed five-scenario suite.\nConflicts: pruned [8] found hard filtering has a narrow operating range and pruned [9] found factorized penalties over-suppress useful routes; this counters by changing evidence calibration and confidence rather than adding stronger penalties or deleting actions.",
+      "insight": "Confidence-gating sparse directional evidence improved B_dev, delivery, Sybil exposure, latency, and hops, but the gain did not transfer to the held-out high-Sybil scenario; the tiny pooled prior remains sensitive to distribution shift.",
+      "result": "B_dev 0.6933176702330417 exceeded trunk 0.6845301005442892, but the single authorized B_test merge verification scored 0.4151347276777513 below trunk 0.42429066273896465; rejected without merge."
+    }
+  ]
+}
+{
+  "run_name": "aegis-router-20260621",
+  "cycle_number": 10,
+  "phase": "cycle_end",
+  "git_branch": "main",
+  "git_head": "1c9ea3050ccb69de3fc40dde73877d13f9238618",
+  "completed_node": "10",
+  "in_flight_executors": [],
+  "pending_human_gates": [],
+  "exit_reason": "Completed exactly one resumed coordinator cycle; external supervisor controls pacing.",
+  "updated_at": "2026-06-22T20:02:00+02:00"
+}
+
+exec
+/usr/bin/zsh -lc 'for f in .arbor/sessions/aegis-router-20260621/experiments/*/report.md; do echo "$f"; sed -n '"'1,220p' \""'$f"; done' in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+.arbor/sessions/aegis-router-20260621/experiments/1/report.md
+# Node 1 — CVaR tail-risk profile selection
+
+## Idea
+
+Use a transparent, offline CVaR-style ranking over existing development
+evidence to select robust edge profiles. The ranking is separate from the
+official benchmark. No benchmark, scenario list, test seed, metric formula,
+source code, or test was modified.
+
+## Evidence and leakage controls
+
+- Sources: `stage2_results.csv` and `stage3_results.csv` from
+  `runs/refine_edge_global_v1` and `runs/refine_edge_global_v2`.
+- Stage 2 was processed first. The large Stage 1 files were not loaded.
+- 399 unique parameter sets were parsed.
+- Only these five development scenarios contributed to the offline ranking:
+  `n120_d6_s08_t36`, `n120_d6_s10_t36`, `n80_d4_s10_t30`,
+  `n200_d6_s08_t36`, and `n120_d8_s10_t48`.
+- The reserved scenario `n120_d6_s15_t30` was excluded from selection even
+  though historical CSV rows contain it.
+- B_test was never executed.
+
+## Offline ranking
+
+For each profile, over the five permitted development scenarios:
+
+- `CVaR_score` is the mean of the two lowest scenario scores.
+- `CVaR_delivery` is the mean of the two lowest delivery rates.
+- `CVaR_sybil` is the mean of the two highest Sybil exposure rates.
+- `score_std` is the population standard deviation across scenario scores.
+
+The selection-only objective was:
+
+```text
+0.50 * CVaR_score
++ 0.35 * CVaR_delivery
+- 0.75 * CVaR_sybil
+- 0.10 * score_std
+```
+
+Six candidates were chosen from the top 60 using a quality/diversity rule:
+70% offline rank quality and 30% minimum normalized parameter-space distance
+from profiles already shortlisted. The complete ranking is in
+`offline_ranking.csv`; exact shortlisted parameters are in `shortlist.json`
+and `candidates/`.
+
+## Fixed B_dev results
+
+The unchanged command was used for every candidate:
+
+```text
+python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py \
+  --split dev --profile <candidate-path>
+```
+
+| Candidate | B_dev score | Delivery | Drop | Sybil | Max Sybil |
+|---|---:|---:|---:|---:|---:|
+| 1 | 0.674271 | 0.602430 | 0.397570 | 0.133064 | 0.155199 |
+| 2 | 0.649006 | 0.588463 | 0.411537 | 0.118764 | 0.139635 |
+| 3 | 0.673778 | 0.591941 | 0.408059 | 0.113976 | 0.125024 |
+| 4 | 0.660359 | 0.595537 | 0.404463 | 0.122836 | 0.136586 |
+| 5 | **0.695938** | **0.609398** | **0.390602** | 0.123690 | 0.139130 |
+| 6 | 0.658166 | 0.602760 | 0.397240 | 0.133028 | 0.143910 |
+
+Raw benchmark outputs are stored in `dev_outputs/`.
+
+## Baseline vs result
+
+- Baseline: `0.6355613879111393`
+- Trunk: `0.6845301005442892`
+- Best candidate: `0.6959375149744956`
+- Absolute gain over trunk: `0.0114074144302064`
+- Relative gain over trunk: `1.67%`
+
+Candidate 5 beats the current trunk on the fixed B_dev benchmark. It was
+materialized as `profiles/aegis-cvar-edge-v1.json`.
+
+## Insight
+
+The profile ranked fifth by the offline tail objective was the strongest on
+the current fixed B_dev benchmark. Pure tail ranking was directionally useful,
+but not perfectly aligned with the official score: the top offline candidate
+did not beat trunk. A small diverse shortlist was therefore important. The
+winning profile improves delivery while retaining Sybil exposure close to the
+security-focused trunk range; its gain remains development-only until a
+coordinator-authorized final held-out evaluation.
+
+## Held-out verification
+
+- Candidate B_test: `0.3405655097363942`
+- Current trunk B_test: `0.42429066273896465`
+- Candidate delivery: `0.48904842127602616`
+- Candidate Sybil exposure: `0.21170029814801336`
+
+The CVaR-selected candidate did not generalize to the protected scenario. It
+was rejected and was not promoted to the validated trunk.
+.arbor/sessions/aegis-router-20260621/experiments/10/report.md
+# Node 10 — Confidence-gated edge evidence
+
+## Idea
+
+Add an optional empirical-Bayes calibration layer to directional edge
+evidence. Sparse failures are shrunk toward a neutral prior and edge penalties
+are multiplied by posterior confidence. Repeated adverse outcomes still
+approach the full learned penalty, while subsequent clean deliveries reduce
+the posterior instead of leaving an early stochastic drop permanently
+decisive.
+
+## Changes
+
+- Added observation and weighted-adverse-evidence helpers to `PeerScore`.
+- Added an opt-in confidence-gated evidence mode to `EdgeLearningSolver`.
+- Maintained a persisted pooled directional-edge statistic for the empirical
+  prior.
+- Kept peer reputation and all default scoring behavior unchanged.
+- Preserved the version-2 state format when the mode is disabled; enabled
+  profiles use version 3 with the pooled statistic.
+- Wired optional parameters through `scripts/heavy_secure_search.py`.
+- Added `profiles/aegis-confidence-gated-edge-v1.json`, an exact v3 parameter
+  copy plus the five evidence controls.
+- Added focused tests for sparse shrinkage, confidence growth, reversal after
+  clean delivery, persistence, default compatibility, and peer-channel
+  isolation.
+
+## Selected configuration
+
+- `evidence_prior_strength`: `4.0`
+- `evidence_confidence_scale`: `3.0`
+- `evidence_neutral_badness`: `0.0`
+- `evidence_pool_weight`: `0.001`
+- `evidence_gate_peer`: `false`
+
+The pooled weight is deliberately small. Larger pooled priors penalized
+previously clean edges and caused nonlinear route-selection regressions.
+
+## Deterministic bounded calibration
+
+Six directional-edge configurations were evaluated on the fixed B_dev suite.
+No B_test command was run. Full trial metrics are in `calibration.json`.
+
+| Trial | Prior | Confidence | Pool weight | B_dev |
+| --- | ---: | ---: | ---: | ---: |
+| edge-p4-c3-w05 | 4.0 | 3.0 | 0.5 | 0.6553856466930241 |
+| edge-p4-c3-w0 | 4.0 | 3.0 | 0.0 | 0.6907971754473833 |
+| edge-p2-c1-w0 | 2.0 | 1.0 | 0.0 | 0.6551698665907838 |
+| edge-p4-c3-w005 | 4.0 | 3.0 | 0.05 | 0.6544249932756959 |
+| edge-p4-c4-w0 | 4.0 | 4.0 | 0.0 | 0.6736226512979068 |
+| **edge-p4-c3-w0001** | **4.0** | **3.0** | **0.001** | **0.6933176702330417** |
+
+## B_dev result
+
+| Metric | Trunk v3 | Node 10 | Change |
+| --- | ---: | ---: | ---: |
+| Robust score | 0.6845301005442892 | 0.6933176702330417 | +0.0087875696887525 |
+| Delivery | 0.6034386334033215 | 0.6049261852559059 | +0.0014875518525844 |
+| Drop | 0.3965613665966785 | 0.3950738147440941 | -0.0014875518525844 |
+| Mean Sybil exposure | 0.12270596925994205 | 0.12244518295905275 | -0.0002607863008893 |
+| Maximum Sybil exposure | 0.14121545069491892 | 0.13839219272417505 | -0.00282325797074387 |
+| Mean latency | 1.8677421621665435 | 1.8488508970488782 | -0.01889126511766537 |
+| Mean hops | 6.1127610281512155 | 6.059211965918315 | -0.05354906223290046 |
+| Mean loss risk | 0.2560795343086617 | 0.2571760438790296 | +0.0010965095703679 |
+
+The candidate beats the validated trunk by `0.0087875696887525` absolute
+(`1.2837%`) while improving delivery, drop rate, mean/max Sybil exposure,
+latency, and route length. Mean loss risk increases slightly.
+
+## Validation
+
+- `python3 -m py_compile aegis_router/solvers.py scripts/heavy_secure_search.py tests/test_confidence_gated_evidence.py`
+- `python3 -m unittest tests.test_confidence_gated_evidence tests.test_edge_learning tests.test_reason_aware_learning -v`
+  - 10 tests passed.
+- `python3 -m unittest discover -s tests -v`
+  - 34 functional tests passed.
+  - One pre-existing import error remains because optional package `pqcrypto`
+    is not installed; no package installation was attempted.
+- Exact base-profile equality assertion passed for every original v3
+  parameter.
+- B_test was run once by the coordinator after the B_dev win qualified the
+  candidate for merge verification.
+
+## B_test merge verification
+
+- Candidate: `0.4151347276777513`
+- Validated trunk: `0.42429066273896465`
+- Delta: `-0.009155935061213338`
+- Delivery: `0.5099696513115667`
+- Mean/max Sybil exposure: `0.19190640163024494`
+- Drop: `0.49003034868843337`
+- Mean latency: `1.8581712648708641`
+- Mean hops: `5.949832962874758`
+
+The candidate failed held-out verification and was pruned without merge.
+
+## Insight
+
+The useful operating point is highly conservative: most of the prior must
+remain neutral, with only a tiny empirical pooled component. Strong pooled
+priors make clean edges inherit network-wide failure evidence and destabilize
+route selection. Confidence-gating directional evidence alone is sufficient
+to improve delivery and Sybil robustness without changing the coarse peer
+reputation channel.
+
+Held-out verification shows that this fixed global prior still does not
+transfer to the high-Sybil regime. Future confidence mechanisms should be
+conditioned on observable local regime or topology.
+.arbor/sessions/aegis-router-20260621/experiments/3/report.md
+# Node 3 — Pheromone-repulsion memory with fast decay
+
+## Idea
+
+Add a lightweight, bounded memory to `EdgeLearningSolver` that reinforces
+successful directed edges, rapidly decays prior evidence, reverses edge
+reinforcement after observed drops or Sybil touches, and creates a short-lived
+local repulsion field around recently bad nodes.
+
+## Changes
+
+- Added an optional pheromone mode to `EdgeLearningSolver`.
+- Persisted bounded directed-edge pheromones and node repulsion values.
+- Added profile-driven construction in `scripts/heavy_secure_search.py`.
+- Added `profiles/aegis-pheromone-repulsion-v1.json`, based on
+  `profiles/aegis-global-edge-v3.json`.
+- Added focused tests for reinforcement, reversal, decay, bounded state,
+  routing behavior, and persistence.
+
+## Implementation choices
+
+- The mode is disabled by default, preserving existing APIs and behavior.
+- Decisions use only `observe_result` outcomes. `next_hop` does not inspect
+  ground-truth Sybil identities.
+- Every observed terminal result decays both memories.
+- A clean delivery adds positive directed-edge pheromone.
+- A drop or observed Sybil touch rapidly shrinks existing positive evidence,
+  then applies negative pheromone and node repulsion.
+- Repulsion includes a weak one-hop spillover around recently bad nodes.
+- Both memories are capped and limited to 4096 entries.
+
+## Baseline vs result
+
+- Original baseline: `0.6355613879111393`
+- Current trunk (`aegis-global-edge-v3`): `0.6845301005442892`
+- Node 3 B_dev: `0.6874925765035899`
+
+## B_dev metrics
+
+- Delivery: `0.601536025815964`
+- Drop: `0.398463974184036`
+- Mean Sybil touch ratio: `0.12057434229948809`
+- Maximum scenario Sybil touch ratio: `0.1477629172474903`
+- Scenarios: `5`
+- Seeds per scenario: `3`
+
+The benchmark helper currently emits its `mean_risk` fallback in the `latency`
+and `hops` JSON fields because the aggregate result does not expose aggregate
+latency/hops. Those two emitted values (`0.2526625159408607`) are therefore not
+reported as actual latency or route length.
+
+## Validation
+
+- `python3 -m py_compile aegis_router/solvers.py scripts/heavy_secure_search.py tests/test_pheromone_repulsion.py`
+- `python3 -m unittest tests.test_pheromone_repulsion tests.test_edge_learning tests.test_reason_aware_learning -v`
+- Result: 8 focused tests passed.
+- Final evaluation used B_dev only. B_test was not executed.
+
+## Held-out verification
+
+- B_test score: `0.42269150871029015`
+- Current trunk B_test score: `0.42429066273896465`
+
+The small B_dev gain did not generalize to the protected held-out scenario, so
+the candidate was rejected and not merged.
+
+## Insight
+
+Strong local repulsion reduced Sybil exposure but damaged delivery. The useful
+configuration keeps repulsion weak and short-lived while giving more weight to
+positive directed-edge reinforcement. This narrowly beats the fixed security
+trunk on B_dev, but the simulator attributes terminal feedback only to the last
+hop, which limits how precisely delayed route failures can update earlier path
+segments.
+.arbor/sessions/aegis-router-20260621/experiments/4/report.md
+# Node 4: Two-profile bandit
+
+## Result
+
+- Baseline B_dev score: `0.6355613879111393`
+- Current trunk B_dev score: `0.6845301005442892`
+- Node 4 B_dev score: `0.6669743086973007`
+- Mean delivery: `0.6048828203201181`
+- Mean Sybil touch ratio: `0.12305470421882768`
+- Maximum scenario Sybil touch ratio: `0.14142051638978148`
+- Mean drop ratio: `0.3951171796798819`
+
+The bandit improved over the original production baseline but did not beat the
+current security-heavy trunk profile on the fixed development suite.
+
+## Implementation
+
+- Deterministic contextual bandit with decayed rewards, exploration bonus, and
+  hysteresis.
+- Context combines recent local and global drop/Sybil pressure.
+- Delivery-heavy and security-heavy `EdgeLearningSolver` instances use separate
+  persistent state files.
+- A bounded per-edge FIFO attributes terminal outcomes to the policy that chose
+  the reported edge.
+- Only the responsible policy receives the outcome and updates its persistent
+  edge learning.
+
+## Validation
+
+- `python3 -m py_compile aegis_router/solvers.py scripts/heavy_secure_search.py tests/test_two_profile_bandit.py`
+- Seven focused unit tests passed before final tuning.
+- B_dev only was evaluated. B_test was not run.
+.arbor/sessions/aegis-router-20260621/experiments/5/report.md
+# Node 5 — Path-level eligibility traces
+
+## Idea
+
+Track each packet's actual directed path and propagate observed terminal
+delivery, drop, loop, and Sybil feedback backward over preceding edges with a
+geometrically decaying eligibility trace.
+
+## Changes
+
+- Added directed path tracking to `Packet` and `EventDrivenSimulator`.
+- Added optional `observe_path_result` dispatch with legacy fallback.
+- Added persistent, directional trace risk to `EdgeLearningSolver`.
+- Kept the final edge on the existing `observe_result` path exactly once;
+  eligibility updates apply only to earlier edges.
+- Added profile `aegis-path-eligibility-v1`, based on
+  `aegis-global-edge-v3`.
+- Added focused tests for path capture, geometric credit assignment, final-edge
+  non-duplication, and disabled-trace compatibility.
+
+## Validation
+
+- `py_compile`: passed.
+- 11 focused unit tests: passed.
+- B_test: not run.
+
+## B_dev result
+
+Best of three bounded trace configurations:
+
+- Absolute robust score: `0.6816484915899128`
+- Delivery: `0.6015539838723201`
+- Drop: `0.39844601612768`
+- Mean Sybil touch: `0.12264524626028629`
+- Maximum Sybil touch: `0.14404045942518526`
+- Reported hops: `0.25520037289296676`
+- Reported latency: `0.25520037289296676`
+
+Current trunk score: `0.6845301005442892`.
+
+Delta versus trunk: `-0.0028816089543764` (`-0.42%`).
+
+## Insight
+
+Path-level feedback is operational and preserves legacy behavior when disabled,
+but the best bounded configuration did not beat the fixed security trunk.
+Longer-lived traces retained delivery better; faster forgetting reduced Sybil
+exposure but cost enough delivery to lower the robust score. The useful signal
+appears to require outcome-specific or confidence-gated attribution rather
+than applying the same terminal Sybil flag across every preceding edge.
+.arbor/sessions/aegis-router-20260621/experiments/6/report.md
+# Node 6 — Adversarial domain-randomized learning curriculum
+
+## Idea
+
+Warm persistent `EdgeLearningSolver` state on a small deterministic curriculum
+covering graph size and density, Sybil pressure and stealth, churn, and
+congestion drift. Official scoring remains the unchanged five-scenario B_dev
+benchmark with seeds `20260612..20260614`. B_test was not run.
+
+## Implementation
+
+- Added deterministic auxiliary environment generation from the explicit seed
+  `6106001`.
+- Added five short curriculum environments spanning 64–160 nodes, degree 4–8,
+  Sybil pressure up to 26%, stealth up to 100%, churn, and congestion drift.
+- Added persistent context priors to `EdgeLearningSolver`.
+- Added optional curriculum construction to the existing edge evaluation path.
+- Added a curriculum profile and an identical no-curriculum control profile.
+- Added focused tests for determinism, coverage, persistence, identity cleanup,
+  and transfer to unseen node IDs.
+
+## Transfer assumption
+
+Raw `(node_id, edge_id)` memories cannot transfer between independently
+generated graphs. The curriculum therefore learns coarse, ID-independent
+context statistics based only on observable link metrics and local neighbor
+degree. After every auxiliary environment, peer reputation, raw edge scores,
+recent adaptive windows, and edge-to-context bindings are cleared. Only the
+context statistics and global risk budget remain persistent.
+
+This is a deliberately limited transfer model. It can generalize recurring
+observable risk patterns, but it cannot identify a stealth Sybil whose metrics
+and local structure are indistinguishable from honest peers until behavioral
+feedback arrives.
+
+## B_dev results
+
+| Variant | Robust score | Delivery | Drop | Mean Sybil | Max Sybil | Latency | Hops |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Same solver, no curriculum | 0.642764 | 0.592006 | 0.407994 | 0.130604 | 0.161257 | 1.855291 | 6.071755 |
+| Curriculum, penalty 0.10 | 0.664944 | 0.600966 | 0.399034 | 0.126744 | 0.151627 | 1.894187 | 6.188296 |
+| Curriculum, penalty 0.20 | 0.669992 | 0.598004 | 0.401996 | 0.124541 | 0.139642 | 1.876881 | 6.180363 |
+| **Curriculum, penalty 0.35** | **0.674405** | **0.594432** | **0.405568** | **0.119427** | **0.136534** | **1.841021** | **6.041305** |
+| Curriculum, penalty 0.50 | 0.657282 | 0.592106 | 0.407894 | 0.121282 | 0.136310 | 1.854403 | 6.081771 |
+| Current trunk | 0.684530 | — | — | — | — | — | — |
+
+The selected curriculum improves its exact no-curriculum control by
+`+0.031641` robust score, lowers mean Sybil exposure by `0.011177`, lowers
+maximum Sybil exposure by `0.024723`, and slightly improves latency and route
+length. Its absolute score remains `0.010125` below the current trunk
+(`-1.48%`), so the node does not justify promotion.
+
+## Validation
+
+- `python3 -m py_compile` passed for all changed Python files.
+- 10 focused tests passed:
+  - `tests.test_domain_randomized_curriculum`
+  - `tests.test_edge_learning`
+  - `tests.test_dynamics`
+- Full B_dev was run for the control and four curriculum penalties.
+- B_test was never executed.
+
+## Insight
+
+Domain randomization produces a real transfer effect when graph-specific
+identities are removed: the selected curriculum materially improves its
+matched control and reduces worst-case Sybil exposure. The transferable
+context representation is still too coarse to beat the trunk; stronger
+structure-aware features or cause-specific feedback would be needed without
+reintroducing graph identity leakage.
+.arbor/sessions/aegis-router-20260621/experiments/7/report.md
+# Node 7 — Concentration-aware route diversification
+
+## Outcome
+
+Recovered an interrupted executor from the active checkout and validated its
+existing artifacts. The implementation added bounded decayed node/edge usage,
+light concentration penalties, optional local structural suspicion, persistent
+state, parameter wiring, a profile, and focused tests.
+
+## Validation
+
+- Focused tests: 5 passed.
+- Full unittest discovery: 33 tests passed; one import error because the
+  optional `pqcrypto` package is not installed.
+- B_dev score: `0.6870040996217148`.
+- Current trunk B_dev: `0.6845301005442892`.
+- B_test score: `0.38720314578550286`.
+- Current trunk B_test: `0.42429066273896465`.
+
+## Decision
+
+Pruned. The small B_dev improvement did not generalize and B_test regressed by
+`0.03708751695346179`. Candidate code was removed from the active checkout.
+The original detailed executor evidence remains under
+`results/7-route-diversification/`.
+
+## Insight
+
+Light route concentration penalties can improve the fixed dev mix and reduce
+its worst-scenario Sybil exposure, but they over-diversify in the held-out
+high-Sybil regime and materially reduce delivery. Future diversity mechanisms
+need a stronger local gate tied to route viability or congestion, rather than
+an unconditional global usage penalty.
+.arbor/sessions/aegis-router-20260621/experiments/8/report.md
+# Node 8 — Viability-shielded routing
+
+## Idea
+
+Add a deterministic control-barrier action filter to `EdgeLearningSolver`.
+Directional edges with extreme learned risk are removed only when at least one
+alternative preserves destination progress, advertised bandwidth headroom,
+bounded projected loss, and loop avoidance. If no such alternative exists,
+the solver uses the original candidate set and ranking unchanged.
+
+## Changes
+
+- Added optional viability-shield controls in an isolated executor copy.
+- Used directional edge evidence for the hard barrier.
+- Added focused tests for filtering, fallback, disablement, and compatibility.
+- Evaluated the validated `profiles/aegis-global-edge-v3.json` profile on B_dev.
+- Did not modify the active checkout or protected benchmark assets.
+
+## Validation
+
+- 11 focused tests passed.
+- Python compilation passed.
+- Full discovery passed 31 tests; one unrelated optional `pqcrypto` import
+  remained unavailable.
+- B_test was not inspected or run.
+
+## B_dev result
+
+- Current trunk: `0.6845301005442892`
+- Candidate: `0.6828301562815761`
+- Delta: `-0.001699944262713137`
+- Delivery: `0.6025623468997969`
+- Mean Sybil exposure: `0.12354440776161507`
+- Maximum Sybil exposure: `0.14414398441575874`
+
+An initial broad barrier scored `0.49076651727913917`, showing that frequent
+hard filtering recreates the delivery collapse seen with unconditional
+penalties. Conservative gating recovered delivery but did not beat trunk.
+
+## Decision
+
+Pruned without B_test. Candidate code remains only in the isolated executor
+copy at `/tmp/aegis-arbor-node8-20260622`; no candidate changes were applied
+to the active checkout.
+
+## Insight
+
+A local viability proof prevents catastrophic over-filtering, but hard edge
+deletion has a narrow useful range. Sparse gating nearly reproduces trunk;
+broader gating loses more delivery than the reduced exposure repays. A future
+mechanism should use viability-gated bounded reranking rather than deleting
+actions.
+.arbor/sessions/aegis-router-20260621/experiments/9/report.md
+# Node 9: cause-specific bounded reranking
+
+## Idea
+
+Add an optional `EdgeLearningSolver` reranker that separates delivery,
+link-loss/congestion, loop, TTL-expiry, and observed-Sybil evidence. The
+combined cause signal is bounded before changing the route score, and no
+candidate action is filtered.
+
+## Changes
+
+- Numeric `edge_penalty` retains the existing aggregate-badness behavior.
+- An object-form `edge_penalty` opts into cause-specific bounded reranking.
+- The candidate profile is an exact copy of
+  `profiles/aegis-global-edge-v3.json` parameters except for that object-form
+  field. Its `base` equals the original v3 `edge_penalty`.
+
+## Deterministic calibration
+
+All channel weights were fixed at delivery `0.2`, link loss `0.12`, loop
+`0.7`, TTL `0.3`, and Sybil `1.0`. Only the cap varied:
+
+- Cap `0.5`: score `0.6557615800994795`
+- Cap `1.0`: score `0.666964541596115`
+- Cap `1.5`: score `0.6564553415637633`
+
+The final profile uses cap `1.0`.
+
+## Valid baseline vs result
+
+- Validated v3 B_dev: `0.6845301005442892`
+- Candidate B_dev: `0.666964541596115`
+- Absolute score change: `-0.017565558948174242`
+- Delivery: `0.5962540842188314`
+- Drop: `0.4037459157811686`
+- Mean Sybil touch: `0.1196079581772471`
+- Max Sybil touch: `0.13873117251209668`
+- Mean risk: `0.25469409617981764`
+- Scenarios/seeds: `5 / 3`
+
+## Analysis and insight
+
+The factorized bounded reranker substantially reduces Sybil exposure, but its
+delivery loss outweighs that security gain under the B_dev robust objective.
+With exact v3 parameters, the tested cause-specific reranker does not improve
+the validated trunk.
+
+## Validation
+
+- Candidate-v3 equality assertion passed for every parameter except
+  object-form `edge_penalty`; its `base` matches v3 exactly.
+- Focused reranking and edge-learning tests: 7 passed.
+- B_test was not run.
+
+exec
+/usr/bin/zsh -lc 'python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py check --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 && python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py view --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --format full' in /home/ghost/projects/aegis-router
+ succeeded in 181ms:
+# Idea Tree
+
+**Baseline**: 0.6356 | **Trunk**: 0.6845
+
+## ROOT: Optimize Aegis Router routing logic for adversarial dynamic networks. Maximize delivery, minimize sybil_touch_ratio, packet loss, latency, and route length; generalize across unseen seeds/scenarios; keep tests, benchmark, and metric formulas untouched; protect B_test and preserve APIs. Build a fixed dev/test benchmark for stealth Sybils, churn, congestion, and multiple graph sizes/densities before deeper optimization. [DONE]
+
+**Insight**: Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.
+
+### 1: Mechanism: CVaR tail-risk scorer over fixed scenario windows
+Hypothesis: optimize the lower tail of delivery and the upper tail of Sybil exposure across the fixed dev scenarios so the router stops overfitting lucky seeds and improves worst-case robustness without changing the benchmark or metric formulas.
+Observable: higher dev robust_score, lower max_sybil, and smaller score variance across seeds.
+Conflicts: none - attacks the objective aggregation axis rather than local link tuning. [PRUNED] (score: 0.6959)
+
+**Insight**: La sélection CVaR sur dev trouve un profil performant localement, mais son score held-out chute fortement; les cinq scénarios dev ne couvrent pas assez le régime Sybil à 15%.
+[Pruned: Surapprentissage dev: B_test 0.340566 très inférieur au trunk validé 0.424291.]
+
+**Result**: B_dev 0.695938 > trunk 0.684530, mais B_test 0.340566 < trunk 0.424291; profil rejeté et non promu.
+
+### 2: Mechanism: Latent hazard filter for nodes and edges
+Hypothesis: maintain a hidden risk belief per node and per directed edge inferred from delayed loss, churn, and queue signals so the router can anticipate stealth Sybil behavior before repeated failures and cut sybil_touch_ratio on unseen seeds.
+Observable: fewer Sybil touches and link-loss drops on held-out seeds with similar delivery.
+Conflicts: none - attacks representation and inference rather than heuristic weighting. [PRUNED]
+
+**Insight**: [Pruned: Regression on the fixed dev/test benchmark: robust score dropped from 0.6356 to 0.5855 on dev and from 0.3000 to 0.2866 on test, so the latent-hazard formulation is not a net win in its current form.]
+
+### 3: Mechanism: Pheromone-repulsion memory with fast decay
+Hypothesis: reinforce successful edges like ant pheromones, but decay them quickly after delayed drops or Sybil hits and add a local repulsion field around recently bad nodes so the router avoids deceptive hubs under churn.
+Observable: lower average hops and latency, fewer loops, and stable delivery on sparse graphs.
+Conflicts: none - attacks path memory and exploration policy rather than the benchmark. [PRUNED] (score: 0.6875)
+
+**Insight**: Une faible mémoire positive d'arêtes avec répulsion courte améliore légèrement B_dev, mais le gain ne généralise pas au held-out; la rétroaction limitée au dernier saut réduit probablement la qualité du crédit causal.
+[Pruned: Le gain dev ne se généralise pas: B_test 0.422692 inférieur au trunk 0.424291.]
+
+**Result**: B_dev 0.687493 > trunk 0.684530, mais B_test 0.422692 < trunk 0.424291; candidat rejeté sans fusion.
+
+### 4: Mechanism: Two-profile bandit selector over edge routing policies
+Hypothesis: switch between the delivery-heavy and security-heavy edge profiles using recent packet outcomes and local churn/sybil pressure so mixed scenarios can get the best of both behaviors instead of averaging them away.
+Observable: higher robust_score on the fixed dev suite and lower max_sybil on the held-out stress scenario without changing any benchmark code.
+Conflicts: none - attacks runtime policy selection rather than per-edge scoring. [PRUNED] (score: 0.667)
+
+**Insight**: Le sélecteur contextuel à deux profils améliore le baseline mais ne dépasse pas le profil sécurité fixe; le coût d'apprentissage et les commutations n'apportent pas de gain robuste sur ce dev fixe.
+[Pruned: Dev score 0.666974 inférieur au trunk 0.684530; pas de justification pour exposer B_test ou fusionner.]
+
+**Result**: B_dev 0.666974, livraison 0.604883, sybil moyen 0.123055, max_sybil 0.141421; inférieur au trunk 0.684530. B_test non exécuté.
+
+### 5: Mechanism: Path-level eligibility traces for delayed routing feedback
+Hypothesis: distribute terminal delivery, drop, loop, and Sybil feedback backward across the actual packet path with decaying eligibility so earlier deceptive edges receive causal credit instead of blaming only the final hop.
+Observable: higher B_dev robust_score with lower Sybil exposure and fewer repeated bad-route failures, especially on sparse scenarios.
+Conflicts: pruned [3] found last-hop pheromone credit did not generalize; this counters it by assigning delayed outcomes across the full traversed path. [PRUNED] (score: 0.6816)
+
+**Insight**: Le crédit sur chemin complet fonctionne mais attribue trop largement le signal terminal; il réduit légèrement Sybil au prix de livraison. Une attribution conditionnelle par cause serait nécessaire.
+[Pruned: B_dev 0.681648 inférieur au trunk 0.684530; pas de validation B_test.]
+
+**Result**: B_dev 0.681648, inférieur au trunk 0.684530; B_test non exécuté.
+
+### 6: Mechanism: Adversarial domain-randomized learning curriculum
+Hypothesis: train persistent edge memory across procedurally varied Sybil ratios, stealth, churn, congestion, graph sizes, and densities before evaluation so the learned state represents invariant risk signals rather than the five fixed dev regimes.
+Observable: maintain or improve B_dev robust_score while reducing variance across dev scenarios and avoiding the high-pressure collapse seen in prior held-out checks.
+Conflicts: pruned [1] overfit fixed dev scenario ranking; this counters it through broader training distributions while leaving the official benchmark and protected test untouched. [PRUNED] (score: 0.6744)
+
+**Insight**: La randomisation de domaine apporte un vrai transfert et réduit fortement l'exposition Sybil par rapport à son contrôle, mais les statistiques contextuelles restent trop grossières et réduisent la livraison.
+[Pruned: B_dev 0.674405 inférieur au trunk 0.684530; branche conservée comme preuve mais non fusionnée.]
+
+**Result**: B_dev 0.674405, inférieur au trunk 0.684530; amélioration de 0.031641 face au contrôle; B_test non exécuté.
+
+**Branch**: coordinator/n6-mechanism-adversarial-domain-ran-0a7b855f
+
+### 7: Mechanism: Concentration-aware route diversification with local structural suspicion
+Hypothesis: penalize repeated dependence on the same transit nodes and edges while using only observable local topology and outcome history to spread traffic across structurally independent routes, reducing the chance that one deceptive Sybil hub captures many packets.
+Observable: lower B_dev max_sybil and route concentration without materially increasing hops, latency, or packet loss.
+Conflicts: pruned [2] used a latent hazard belief and regressed; this counters via explicit route concentration and observable structural diversity rather than hidden-risk inference. [PRUNED] (score: 0.687)
+
+**Insight**: Light route concentration penalties improved fixed B_dev but regressed held-out high-Sybil delivery; unconditional global usage penalties do not generalize. Future diversification needs a stronger local viability or congestion gate.
+[Pruned: B_test regression: 0.387203 below validated trunk 0.424291 after B_dev improvement; candidate code removed from active checkout.]
+
+**Result**: B_dev 0.687004 exceeded trunk 0.684530, but one merge-verification B_test scored 0.387203 below trunk 0.424291; rejected without merge.
+
+### 8: Mechanism: Viability-shielded routing with a control-barrier action filter
+Hypothesis: Filter high-risk neighbors only when at least one locally viable alternative preserves destination progress, queue headroom, and bounded projected loss, so security pressure cannot remove the last delivery-capable action as unconditional penalties did.
+Observable: B_dev robust_score exceeds 0.684530 while delivery stays near trunk and max Sybil exposure falls without materially increasing hops or latency.
+Conflicts: pruned [7] said unconditional concentration penalties over-diversify and pruned [6] said coarse risk penalties reduce delivery; this counters via a per-decision viability shield that leaves baseline ranking unchanged when no safe alternative exists. [PRUNED] (score: 0.6828)
+
+**Insight**: A local viability proof prevents catastrophic over-filtering, but hard edge deletion has a narrow operating range: conservative gating nearly matches trunk without exceeding it, while broader gating collapses delivery.
+[Pruned: B_dev 0.682830 did not exceed validated trunk 0.684530; B_test not authorized for a losing candidate.]
+
+**Result**: Implemented and validated an optional directional viability shield in an isolated executor copy; B_dev scored 0.6828301562815761, below trunk by 0.001699944262713137. B_test was not run.
+
+### 9: Mechanism: Cause-specific feedback router with competing delivery and adversary evidence channels
+Hypothesis: Separate congestion, link-loss, loop, and observed-Sybil evidence before updating edge preferences, because the shared badness signal currently confuses recoverable congestion with adversarial risk and suppresses useful delivery routes.
+Observable: B_dev robust_score and delivery improve together, with fewer repeated Sybil touches and no regression in congested low-Sybil scenarios.
+Conflicts: pruned [5] said uniform path credit assigns terminal signals too broadly; this counters by factorizing feedback by observable failure cause before any routing penalty is applied. [PRUNED] (score: 0.667)
+
+**Insight**: Cause-specific bounded reranking on the exact v3 profile reduced mean/max Sybil exposure to 0.119608/0.138731, but delivery fell to 0.596254; factorized penalties still over-suppress useful routes unless confidence or context can distinguish causal adversary evidence. [Pruned: B_dev 0.666965 below validated trunk 0.684530; B_test not run.]
+
+**Result**: B_dev 0.666964541596115, below validated trunk 0.6845301005442892; B_test not run; candidate retained only in isolated executor copy.
+
+**Branch**: /tmp/aegis-arbor-node9-cycle9-20260622
+
+### 10: Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage
+Hypothesis: Shrink sparse edge failure evidence toward a neutral prior and apply learned penalties only as posterior confidence grows, so stochastic early drops cannot permanently suppress delivery-capable routes while repeated adversarial outcomes still accumulate decisive evidence.
+Observable: B_dev robust_score exceeds 0.684530 with delivery preserved near trunk and mean/max Sybil exposure no worse than trunk across the fixed five-scenario suite.
+Conflicts: pruned [8] found hard filtering has a narrow operating range and pruned [9] found factorized penalties over-suppress useful routes; this counters by changing evidence calibration and confidence rather than adding stronger penalties or deleting actions. [PRUNED] (score: 0.6933)
+
+**Insight**: Confidence-gating sparse directional evidence improved B_dev, delivery, Sybil exposure, latency, and hops, but the gain did not transfer to the held-out high-Sybil scenario; the tiny pooled prior remains sensitive to distribution shift.
+
+**Result**: B_dev 0.6933176702330417 exceeded trunk 0.6845301005442892, but the single authorized B_test merge verification scored 0.4151347276777513 below trunk 0.42429066273896465; rejected without merge.
+
+**Branch**: dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea at /tmp/aegis-arbor-node10-cycle10-20260622
+
+codex
+Reconciliation found no live executor and no `running` node. The only stale worktree record points to a missing directory for already-pruned node 6, so it is evidence-only. There are no pending leaves; I’m entering the strict ideation gate from the current constraints.
+exec
+/usr/bin/zsh -lc "sed -n '1,280p' aegis_router/solvers.py && sed -n '1,240p' profiles/aegis-global-edge-v3.json && sed -n '1,260p' .arbor/sessions/aegis-router-20260621/benchmark_eval.py" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+from __future__ import annotations
+
+from dataclasses import dataclass, field, asdict
+from collections import defaultdict, deque
+import json
+from pathlib import Path
+from typing import Protocol
+
+from .agent import HybridRoutingScorer, QRoutingAgent
+from .graph import NodeId, P2PGraph
+from .packet import Packet
+
+
+class RoutingSolver(Protocol):
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        ...
+
+
+@dataclass
+class ShortestPathSolver:
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        assert packet.node is not None
+        return graph.shortest_path_next_hop(packet.node, packet.dst)
+
+
+@dataclass
+class HybridSolver:
+    scorer: HybridRoutingScorer
+
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        assert packet.node is not None
+        return self.scorer.choose(
+            graph,
+            node=packet.node,
+            dst=packet.dst,
+            visited=packet.visited,
+            ttl_remaining=packet.ttl,
+        )
+
+
+@dataclass
+class RiskAwareHybridSolver:
+    """Hybrid router with risk budget and online peer reputation.
+
+    Inspired by risk-aware MARL: avoid actions whose one-step loss would exceed
+    a packet risk budget, then score remaining neighbors with a reputation
+    penalty learned from observed drops.
+    """
+
+    scorer: HybridRoutingScorer = field(default_factory=lambda: HybridRoutingScorer(loss_weight=16.0, loop_penalty=20.0))
+    risk_budget: float = 0.35
+    reputation_penalty: float = 4.0
+    reputation_decay: float = 0.92
+    peer_risk: defaultdict[NodeId, float] = field(default_factory=lambda: defaultdict(float))
+
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        assert packet.node is not None
+        neighbors = graph.neighbors(packet.node)
+        if not neighbors:
+            return None
+        viable = []
+        for nb in neighbors:
+            m = graph.metrics(packet.node, nb)
+            projected = 1.0 - ((1.0 - packet.loss_risk) * (1.0 - m.loss))
+            if projected <= self.risk_budget or nb == packet.dst:
+                viable.append(nb)
+        candidates = viable or neighbors
+        return max(candidates, key=lambda nb: self._score(graph, packet, nb))
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        old = self.peer_risk[neighbor] * self.reputation_decay
+        signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
+        self.peer_risk[neighbor] = max(0.0, min(1.0, old + signal))
+
+    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+        assert packet.node is not None
+        return self.scorer.score(
+            graph,
+            node=packet.node,
+            neighbor=nb,
+            dst=packet.dst,
+            visited=packet.visited,
+            ttl_remaining=packet.ttl,
+        ) - (self.reputation_penalty * self.peer_risk[nb])
+
+
+@dataclass
+class AdaptiveRiskSolver(RiskAwareHybridSolver):
+    """Risk-aware solver that adapts its budget from recent outcomes.
+
+    Drops mean we are too conservative / failing to find viable paths, so the
+    budget relaxes. Sybil touches mean we are accepting suspicious routes, so
+    the budget tightens. This keeps risk low without killing delivery.
+    """
+
+    risk_budget: float = 0.30
+    min_budget: float = 0.15
+    max_budget: float = 0.55
+    adapt_step: float = 0.06
+    window_size: int = 10
+    drop_threshold: float = 0.35
+    sybil_threshold: float = 0.5
+    _recent_drops: deque[bool] = field(default_factory=deque)
+    _recent_sybil: deque[bool] = field(default_factory=deque)
+
+    def __post_init__(self) -> None:
+        # Bounded windows: append auto-evicts the oldest in O(1), no list.pop(0).
+        self._recent_drops = deque(self._recent_drops, maxlen=self.window_size)
+        self._recent_sybil = deque(self._recent_sybil, maxlen=self.window_size)
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
+        self._recent_drops.append(dropped)
+        self._recent_sybil.append(touched_sybil)
+        if len(self._recent_drops) < self.window_size:
+            return
+        drop_rate = sum(self._recent_drops) / self.window_size
+        sybil_rate = sum(self._recent_sybil) / self.window_size
+        if drop_rate > self.drop_threshold:
+            self.risk_budget = min(self.max_budget, self.risk_budget + self.adapt_step)
+        elif sybil_rate > self.sybil_threshold:
+            self.risk_budget = max(self.min_budget, self.risk_budget - self.adapt_step)
+
+
+@dataclass
+class PeerScore:
+    delivered: int = 0
+    drops: int = 0
+    sybil_touches: int = 0
+    link_losses: int = 0
+    loops: int = 0
+    ttl_expired: int = 0
+
+    @property
+    def badness(self) -> float:
+        total = max(1, self.delivered + self.drops)
+        return (
+            (self.drops / total)
+            + 0.7 * (self.sybil_touches / total)
+            + 0.35 * (self.link_losses / total)
+            + 0.5 * (self.loops / total)
+            + 0.25 * (self.ttl_expired / total)
+        )
+
+
+@dataclass
+class PersistentLearningSolver(AdaptiveRiskSolver):
+    """Adaptive router with durable peer/path memory.
+
+    It stores per-neighbor outcomes in JSON so repeated runs keep learning which
+    next hops produce deliveries, drops, and Sybil exposure.
+    """
+
+    state_path: str | Path = "aegis_state.json"
+    learned_penalty: float = 1.0
+    peer_scores: defaultdict[NodeId, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.state_path = Path(self.state_path)
+        self.load()
+
+    def load(self) -> None:
+        if not self.state_path.exists():
+            return
+        data = json.loads(self.state_path.read_text())
+        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+        for key, value in data.get("peers", {}).items():
+            node = int(key)
+            self.peer_scores[node] = PeerScore(**value)
+            self.peer_risk[node] = self.peer_scores[node].badness
+
+    def save(self) -> None:
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "version": 1,
+            "risk_budget": self.risk_budget,
+            "peers": {str(k): asdict(v) for k, v in self.peer_scores.items()},
+        }
+        self.state_path.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
+        score = self.peer_scores[neighbor]
+        if delivered:
+            score.delivered += 1
+        if dropped:
+            score.drops += 1
+        if touched_sybil:
+            score.sybil_touches += 1
+        if reason == "link_loss":
+            score.link_losses += 1
+        elif reason == "loop":
+            score.loops += 1
+        elif reason == "ttl_expired":
+            score.ttl_expired += 1
+        self.peer_risk[neighbor] = max(self.peer_risk[neighbor], score.badness)
+
+    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+        return super()._score(graph, packet, nb) - (self.learned_penalty * self.peer_scores[nb].badness)
+
+
+EdgeKey = tuple[NodeId, NodeId]
+
+
+@dataclass
+class EdgeLearningSolver(PersistentLearningSolver):
+    """Persistent learner with directional edge memory.
+
+    Neighbor-level reputation is coarse. This tracks `(from_node, to_node)` so a
+    peer can be bad from one route segment and still usable from another.
+    """
+
+    edge_penalty: float = 0.7
+    edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+
+    def load(self) -> None:
+        if not Path(self.state_path).exists():
+            return
+        data = json.loads(Path(self.state_path).read_text())
+        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+        for key, value in data.get("peers", {}).items():
+            node = int(key)
+            self.peer_scores[node] = PeerScore(**value)
+            self.peer_risk[node] = self.peer_scores[node].badness
+        for key, value in data.get("edges", {}).items():
+            left, right = key.split("->", 1)
+            self.edge_scores[(int(left), int(right))] = PeerScore(**value)
+
+    def save(self) -> None:
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "version": 2,
+            "risk_budget": self.risk_budget,
+            "peers": {str(k): asdict(v) for k, v in self.peer_scores.items()},
+            "edges": {f"{a}->{b}": asdict(v) for (a, b), v in self.edge_scores.items()},
+        }
+        self.state_path.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        super().observe_result(
+            neighbor=neighbor,
+            delivered=delivered,
+            dropped=dropped,
+{
+  "candidate_id": 11285,
+  "metrics": {
+    "delivery_std": 0.04663730607132892,
+    "max_sybil": 0.19757267026428815,
+    "mean_delivery": 0.5802967236462969,
+    "mean_drop": 0.4197032763537031,
+    "mean_pps": 23.437562003968253,
+    "mean_risk": 0.26026786939555324,
+    "mean_score": 0.415940934527866,
+    "mean_sybil": 0.1362230234870288,
+    "min_delivery": 0.5284587210919719,
+    "min_pps": 19.31845238095238,
+    "min_score": 0.29345037531783336,
+    "pps_std": 3.8651013329186474,
+    "robust_score": 0.5633561173438669,
+    "score_std": 0.07445245207813657,
+    "sybil_std": 0.030251827743683533,
+    "target_hits_mean": 2.8333333333333335
+  },
+  "name": "aegis-global-edge-v3",
+  "objective": "sybil_stress with quality-diversity selection",
+  "params": {
+    "adapt_step": 0.004,
+    "bandwidth_weight": 1.0833963887382254,
+    "drop_threshold": 0.3850051196808128,
+    "edge_penalty": 0.5125733970107129,
+    "latency_weight": 5.044474396831799,
+    "learned_penalty": 10.314713435311118,
+    "loop_penalty": 10.920705962346915,
+    "loss_weight": 73.46609575166937,
+    "low_ttl_penalty": 3.2067152782058885,
+    "max_budget": 0.6458961566667539,
+    "min_budget": 0.16502772906506055,
+    "progress_weight": 6.723975654046898,
+    "reputation_decay": 0.9398518881235585,
+    "reputation_penalty": 0.5802282580642248,
+    "risk_budget": 0.25460464077525524,
+    "solver": "edge",
+    "stability_weight": 2.5375440145332515,
+    "sybil_threshold": 0.2172563905536011,
+    "window_size": 16
+  },
+  "parent": "top2",
+  "scenario_metrics": [
+    {
+      "delivery": 0.6260986837575205,
+      "delivery_std": 0.03176931210354955,
+      "drop": 0.3739013162424794,
+      "drop_std": 0.031769312103549545,
+      "generated": 719.5625,
+      "generated_std": 25.310493747653364,
+      "hops": 5.913293525227686,
+      "hops_std": 0.26188705916704447,
+      "latency": 1.7873427732246212,
+      "latency_std": 0.11070566360565312,
+      "pps": 23.985416666666666,
+      "pps_std": 0.8436831249217789,
+      "risk": 0.24822738950827272,
+      "risk_std": 0.010644949020096767,
+      "scenario": "n120_d6_s08_t36",
+      "score": 0.5009161334199776,
+      "score_std": 0.03847882380196533,
+      "sybil": 0.10217783537996163,
+      "sybil_std": 0.015078705680648138,
+      "target_hits": 3,
+      "wall_pps": 425.51702901817197,
+      "wall_pps_std": 45.904882390589975
+    },
+    {
+      "delivery": 0.596578678150317,
+      "delivery_std": 0.03150896175332313,
+      "drop": 0.4034213218496831,
+      "drop_std": 0.03150896175332313,
+      "generated": 721.0625,
+      "generated_std": 25.230112836648196,
+      "hops": 5.942948150651106,
+      "hops_std": 0.21260895498167925,
+      "latency": 1.813124346571498,
+      "latency_std": 0.10588028635350404,
+      "pps": 24.035416666666666,
+      "pps_std": 0.8410037612216065,
+      "risk": 0.2562605796547285,
+      "risk_std": 0.010901450143894313,
+      "scenario": "n120_d6_s10_t36",
+      "score": 0.4342208490735957,
+      "score_std": 0.03887995055020177,
+      "sybil": 0.13645111355841955,
+      "sybil_std": 0.017271955508643296,
+      "target_hits": 3,
+      "wall_pps": 439.4044266691318,
+      "wall_pps_std": 42.52170073840467
+    },
+    {
+      "delivery": 0.5450533842955719,
+      "delivery_std": 0.04011611738562644,
+      "drop": 0.4549466157044281,
+      "drop_std": 0.04011611738562644,
+      "generated": 541.90625,
+      "generated_std": 25.6324493745233,
+      "hops": 6.065407708982026,
+      "hops_std": 0.3895198322841369,
+      "latency": 1.9084028003989109,
+      "latency_std": 0.1495134206233411,
+      "pps": 19.353794642857142,
+      "pps_std": 0.9154446205186896,
+      "risk": 0.2697400343852655,
+      "risk_std": 0.016018685485214196,
+      "scenario": "n80_d4_s10_t30",
+      "score": 0.3715400408779455,
+      "score_std": 0.05040428398700335,
+      "sybil": 0.1377724764900407,
+      "sybil_std": 0.02139039768058009,
+      "target_hits": 3,
+      "wall_pps": 562.035788732687,
+      "wall_pps_std": 86.45815442884867
+    },
+    {
+      "delivery": 0.5360257219930032,
+      "delivery_std": 0.030140847823471612,
+      "drop": 0.4639742780069968,
+      "drop_std": 0.03014084782347161,
+      "generated": 645.8333333333334,
+      "generated_std": 23.306681207089287,
+      "hops": 7.163289519519232,
+      "hops_std": 0.28571114844734113,
+      "latency": 2.19649382634891,
+      "latency_std": 0.11993147439771867,
+      "pps": 23.06547619047619,
+      "pps_std": 0.8323814716817602,
+      "risk": 0.2858020714088629,
+      "risk_std": 0.011297807636382731,
+      "scenario": "n200_d6_s08_t36",
+      "score": 0.38986308658611174,
+      "score_std": 0.03465474489881399,
+      "sybil": 0.11323068379666801,
+      "sybil_std": 0.016258714687516284,
+      "target_hits": 3,
+      "wall_pps": 385.2092225671374,
+      "wall_pps_std": 39.36060274878794
+    },
+    {
+      "delivery": 0.6495651525893968,
+      "delivery_std": 0.02756486562562948,
+      "drop": 0.3504348474106031,
+      "drop_std": 0.027564865625629476,
+      "generated": 864.2708333333334,
+      "generated_std": 29.92959765804115,
+      "hops": 5.289608129943947,
+      "hops_std": 0.18762769692906708,
+      "latency": 1.600578340171117,
+      "latency_std": 0.08273558246311209,
+      "pps": 30.866815476190478,
+      "pps_std": 1.0689142020728983,
+      "risk": 0.22976625092689948,
+      "risk_std": 0.010206008125533588,
+      "scenario": "n120_d8_s10_t48",
+      "score": 0.5056551218917322,
+      "score_std": 0.03450823529074676,
+      "sybil": 0.13013336143279483,
+      "sybil_std": 0.014768242123524329,
+      "target_hits": 4,
+      "wall_pps": 418.3514813050753,
+      "wall_pps_std": 44.092285706902324
+    },
+    {
+      "delivery": 0.5284587210919719,
+      "delivery_std": 0.03471383875561079,
+      "drop": 0.47154127890802805,
+      "drop_std": 0.03471383875561079,
+      "generated": 540.9166666666666,
+      "generated_std": 24.816689053045646,
+      "hops": 5.9328704718577105,
+      "hops_std": 0.2726084571690449,
+      "latency": 1.8628315948107734,
+      "latency_std": 0.11784381157564411,
+      "pps": 19.31845238095238,
+      "pps_std": 0.8863103233230589,
+      "risk": 0.2718108904892904,
+      "risk_std": 0.013071426325889583,
+      "scenario": "n120_d6_s15_t30",
+      "score": 0.29345037531783336,
+      "score_std": 0.04332399483319171,
+      "sybil": 0.19757267026428815,
+      "sybil_std": 0.022482180547700258,
+      "target_hits": 1,
+      "wall_pps": 434.678790291771,
+      "wall_pps_std": 52.311296236527035
+    }
+  ],
+  "source_run": "runs/refine_edge_global_v2",
+  "validated_on": "stage3: 96 seeds x 6 scenarios after 12,288 sybil_stress mutation candidates"
+}
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+BENCH_PATH = ROOT / "scripts" / "refine_edge_multiscenario.py"
+def load_benchmark():
+    spec = importlib.util.spec_from_file_location("aegis_refine_benchmark", BENCH_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {BENCH_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["aegis_refine_benchmark"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def scenarios_for(split: str):
+    bench = load_benchmark()
+    if split == "dev":
+        return bench.SCENARIOS[:5]
+    if split == "test":
+        return bench.SCENARIOS[5:]
+    raise SystemExit(f"unknown split: {split}")
+
+
+def seed_offsets_for(split: str) -> list[int]:
+    if split == "dev":
+        return [20260612, 20260613, 20260614]
+    if split == "test":
+        return [20270612, 20270613, 20270614]
+    raise SystemExit(f"unknown split: {split}")
+
+
+def load_params(profile_path: Path) -> dict[str, object]:
+    payload = json.loads(profile_path.read_text())
+    params = dict(payload["params"])
+    params["solver"] = "edge"
+    params["candidate_id"] = 1
+    params["parent"] = "baseline"
+    return params
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--split", choices=["dev", "test"], required=True)
+    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="sybil_stress")
+    ap.add_argument("--profile", default=str(ROOT / "profiles" / "aegis-prod-edge-v1.json"))
+    ap.add_argument("--workdir", default=str(Path(__file__).resolve().parent / "benchmark_state"))
+    args = ap.parse_args()
+
+    bench = load_benchmark()
+    profile_path = Path(args.profile)
+    params = load_params(profile_path)
+    scenarios = scenarios_for(args.split)
+    seed_offsets = seed_offsets_for(args.split)
+    workdir = Path(args.workdir) / profile_path.stem / args.split
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    result = bench.evaluate_multiscenario(
+        params,
+        seed_offsets,
+        scenarios,
+        str(workdir),
+        stage=args.split,
+        objective=args.objective,
+    )
+    print(
+        json.dumps(
+            {
+                "score": result["robust_score"],
+                "primary_score": result["robust_score"],
+                "delivery": result["mean_delivery"],
+                "sybil": result["mean_sybil"],
+                "max_sybil": result["max_sybil"],
+                "drop": result["mean_drop"],
+                "latency": result["latency"] if "latency" in result else result["mean_risk"],
+                "hops": result["hops"] if "hops" in result else result["mean_risk"],
+                "scenario_count": result["scenario_count"],
+                "seed_count": result["seed_count"],
+                "objective": args.objective,
+                "split": args.split,
+                "profile": str(profile_path),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+exec
+/usr/bin/zsh -lc 'jq . .arbor/sessions/aegis-router-20260621/experiments/10/metrics.json && find results -maxdepth 3 -type f | sort | tail -80' in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+{
+  "node_id": "10",
+  "hypothesis": "Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage\nHypothesis: Shrink sparse edge failure evidence toward a neutral prior and apply learned penalties only as posterior confidence grows, so stochastic early drops cannot permanently suppress delivery-capable routes while repeated adversarial outcomes still accumulate decisive evidence.\nObservable: B_dev robust_score exceeds 0.684530 with delivery preserved near trunk and mean/max Sybil exposure no worse than trunk across the fixed five-scenario suite.\nConflicts: pruned [8] found hard filtering has a narrow operating range and pruned [9] found factorized penalties over-suppress useful routes; this counters by changing evidence calibration and confidence rather than adding stronger penalties or deleting actions.",
+  "score": 0.6933176702330417,
+  "insight": "Confidence-gating sparse directional evidence improved B_dev, delivery, Sybil exposure, latency, and hops, but the gain did not transfer to the held-out high-Sybil scenario; the tiny pooled prior remains sensitive to distribution shift.",
+  "result": "B_dev 0.6933176702330417 exceeded trunk 0.6845301005442892, but the single authorized B_test merge verification scored 0.4151347276777513 below trunk 0.42429066273896465; rejected without merge.",
+  "test_score": 0.4151347276777513,
+  "test_trunk_score": 0.42429066273896465,
+  "decision": "pruned",
+  "branch": "dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea at /tmp/aegis-arbor-node10-cycle10-20260622"
+}
+results/1-cvar-tail-selection/REPORT.md
+results/1-cvar-tail-selection/candidates/candidate-1.json
+results/1-cvar-tail-selection/candidates/candidate-2.json
+results/1-cvar-tail-selection/candidates/candidate-3.json
+results/1-cvar-tail-selection/candidates/candidate-4.json
+results/1-cvar-tail-selection/candidates/candidate-5.json
+results/1-cvar-tail-selection/candidates/candidate-6.json
+results/1-cvar-tail-selection/dev_outputs/candidate-1.json
+results/1-cvar-tail-selection/dev_outputs/candidate-2.json
+results/1-cvar-tail-selection/dev_outputs/candidate-3.json
+results/1-cvar-tail-selection/dev_outputs/candidate-4.json
+results/1-cvar-tail-selection/dev_outputs/candidate-5.json
+results/1-cvar-tail-selection/dev_outputs/candidate-6.json
+results/1-cvar-tail-selection/evaluation_summary.csv
+results/1-cvar-tail-selection/offline_ranking.csv
+results/1-cvar-tail-selection/select_candidates.py
+results/1-cvar-tail-selection/shortlist.json
+results/1-cvar-tail-selection/test_output.json
+results/10-confidence-gated-evidence/REPORT.md
+results/10-confidence-gated-evidence/calibration.json
+results/10-confidence-gated-evidence/evaluation.json
+results/10-confidence-gated-evidence/test-evaluation.json
+results/10-confidence-gated-evidence/trunk-bdev-full.json
+results/3-pheromone-repulsion/REPORT.md
+results/3-pheromone-repulsion/dev_eval.json
+results/3-pheromone-repulsion/test_eval.json
+results/3-pheromone-repulsion/tuning_results.json
+results/5-path-eligibility/REPORT.md
+results/5-path-eligibility/evaluations.json
+results/6-domain-randomized-curriculum/REPORT.md
+results/6-domain-randomized-curriculum/control_bdev.json
+results/6-domain-randomized-curriculum/curriculum_bdev.json
+results/6-domain-randomized-curriculum/curriculum_penalty_010_bdev.json
+results/6-domain-randomized-curriculum/curriculum_penalty_020_bdev.json
+results/6-domain-randomized-curriculum/curriculum_penalty_050_bdev.json
+results/7-route-diversification/REPORT.md
+results/7-route-diversification/evaluations.json
+results/7-route-diversification/final-state/state_c1_s20260629.json
+results/7-route-diversification/final-state/state_c1_s20260630.json
+results/7-route-diversification/final-state/state_c1_s20260631.json
+results/7-route-diversification/final-state/state_c1_s21260632.json
+results/7-route-diversification/final-state/state_c1_s21260633.json
+results/7-route-diversification/final-state/state_c1_s21260634.json
+results/7-route-diversification/final-state/state_c1_s22260635.json
+results/7-route-diversification/final-state/state_c1_s22260636.json
+results/7-route-diversification/final-state/state_c1_s22260637.json
+results/7-route-diversification/final-state/state_c1_s23260638.json
+results/7-route-diversification/final-state/state_c1_s23260639.json
+results/7-route-diversification/final-state/state_c1_s23260640.json
+results/7-route-diversification/final-state/state_c1_s24260641.json
+results/7-route-diversification/final-state/state_c1_s24260642.json
+results/7-route-diversification/final-state/state_c1_s24260643.json
+
+exec
+/usr/bin/zsh -lc "python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py view --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --format constraints && jq 'keys, .meta' .arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.json" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+## TREE SHAPE
+max_depth: 2 | depth-1: 10 nodes (10 pruned)
+
+## ROOT INSIGHT (current best global understanding - your priors)
+Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.
+
+## PRUNED LESSONS (10 - these directions FAILED. Do NOT re-propose the same hidden assumption or mechanism class without explaining the counter.)
+- [1] Mechanism: CVaR tail-risk scorer over fixed scenario windows Hypothesis: optimize the lower tail ...
+  -> La sélection CVaR sur dev trouve un profil performant localement, mais son score held-out chute fortement; les cinq scénarios dev ne couvrent pas assez le régime Sybil à 15%. [Pruned: Surapprentiss...
+- [2] Mechanism: Latent hazard filter for nodes and edges Hypothesis: maintain a hidden risk belief per...
+  -> [Pruned: Regression on the fixed dev/test benchmark: robust score dropped from 0.6356 to 0.5855 on dev and from 0.3000 to 0.2866 on test, so the latent-hazard formulation is not a net win in its cu...
+- [3] Mechanism: Pheromone-repulsion memory with fast decay Hypothesis: reinforce successful edges like...
+  -> Une faible mémoire positive d'arêtes avec répulsion courte améliore légèrement B_dev, mais le gain ne généralise pas au held-out; la rétroaction limitée au dernier saut réduit probablement la quali...
+- [4] Mechanism: Two-profile bandit selector over edge routing policies Hypothesis: switch between the ...
+  -> Le sélecteur contextuel à deux profils améliore le baseline mais ne dépasse pas le profil sécurité fixe; le coût d'apprentissage et les commutations n'apportent pas de gain robuste sur ce dev fixe....
+- [5] Mechanism: Path-level eligibility traces for delayed routing feedback Hypothesis: distribute term...
+  -> Le crédit sur chemin complet fonctionne mais attribue trop largement le signal terminal; il réduit légèrement Sybil au prix de livraison. Une attribution conditionnelle par cause serait nécessaire....
+- [6] Mechanism: Adversarial domain-randomized learning curriculum Hypothesis: train persistent edge me...
+  -> La randomisation de domaine apporte un vrai transfert et réduit fortement l'exposition Sybil par rapport à son contrôle, mais les statistiques contextuelles restent trop grossières et réduisent la ...
+- [7] Mechanism: Concentration-aware route diversification with local structural suspicion Hypothesis: ...
+  -> Light route concentration penalties improved fixed B_dev but regressed held-out high-Sybil delivery; unconditional global usage penalties do not generalize. Future diversification needs a stronger ...
+- [8] Mechanism: Viability-shielded routing with a control-barrier action filter Hypothesis: Filter hig...
+  -> A local viability proof prevents catastrophic over-filtering, but hard edge deletion has a narrow operating range: conservative gating nearly matches trunk without exceeding it, while broader gatin...
+- [9] Mechanism: Cause-specific feedback router with competing delivery and adversary evidence channels...
+  -> Cause-specific bounded reranking on the exact v3 profile reduced mean/max Sybil exposure to 0.119608/0.138731, but delivery fell to 0.596254; factorized penalties still over-suppress useful routes ...
+- [10] Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage Hypothesis: S...
+  -> Confidence-gating sparse directional evidence improved B_dev, delivery, Sybil exposure, latency, and hops, but the gain did not transfer to the held-out high-Sybil scenario; the tiny pooled prior r...
+
+## VALIDATED FINDINGS (1 - build on these; do not re-derive them.)
+- [done ROOT] Optimize Aegis Router routing logic for adversarial dynamic networks. Maximize delivery, minimize...
+  -> Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfe...
+[
+  "max_depth",
+  "meta",
+  "nodes",
+  "root_id",
+  "version"
+]
+{
+  "baseline_score": 0.6355613879111393,
+  "trunk_score": 0.6845301005442892,
+  "test_baseline_score": 0.2999592574075973,
+  "test_trunk_score": 0.42429066273896465,
+  "eval_cmd": "cd {cwd} && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split dev",
+  "eval_cmd_test": "cd {cwd} && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split test",
+  "eval_timeout": 3600,
+  "eval_retries": 0,
+  "eval_retry_base_delay": 5,
+  "eval_retry_max_delay": 30,
+  "dataset_info": "dev: multi-scenario fixed benchmark from refine_edge_multiscenario.py (n120_d6_s08_t36, n120_d6_s10_t36, n80_d4_s10_t30, n200_d6_s08_t36, n120_d8_s10_t48) with seeds 20260612-20260614; test: held-out n120_d6_s15_t30 with seeds 20270612-20270614; objective sybil_stress; score is robust_score from benchmark_eval.py",
+  "metric_direction": "maximize",
+  "trunk_branch": "arbor/trunk/aegis-router-20260621",
+  "submission_path": null,
+  "sample_submission_path": null
+}
+
+exec
+/usr/bin/zsh -lc "jq '{trunk: {score:.score,delivery:.delivery,sybil:.sybil,max_sybil:.max_sybil,drop:.drop,latency:.latency,hops:.hops}, node10: input}' results/10-confidence-gated-evidence/trunk-bdev-full.json results/10-confidence-gated-evidence/evaluation.json" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+{
+  "trunk": {
+    "score": 0.6845301005442892,
+    "delivery": 0.6034386334033215,
+    "sybil": 0.12270596925994205,
+    "max_sybil": 0.14121545069491892,
+    "drop": 0.3965613665966785,
+    "latency": 1.8677421621665435,
+    "hops": 6.1127610281512155
+  },
+  "node10": {
+    "delivery": 0.6049261852559059,
+    "drop": 0.3950738147440941,
+    "hops": 6.059211965918315,
+    "latency": 1.8488508970488782,
+    "max_sybil": 0.13839219272417505,
+    "objective": "sybil_stress",
+    "primary_score": 0.6933176702330417,
+    "profile": "profiles/aegis-confidence-gated-edge-v1.json",
+    "risk": 0.2571760438790296,
+    "scenario_count": 5,
+    "score": 0.6933176702330417,
+    "seed_count": 3,
+    "split": "dev",
+    "sybil": 0.12244518295905275
+  }
+}
+
+exec
+/usr/bin/zsh -lc "rg -n \"class EdgeLearningSolver|def next_hop|def _score|edge_scores|risk_budget|metrics\\(\" aegis_router/solvers.py scripts/heavy_secure_search.py aegis_router/graph.py | head -140 && sed -n '240,520p' aegis_router/solvers.py" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+aegis_router/graph.py:45:    def metrics(self, a: NodeId, b: NodeId) -> LinkMetrics:
+scripts/heavy_secure_search.py:61:            risk_budget=params["risk_budget"],
+scripts/heavy_secure_search.py:68:            risk_budget=params["risk_budget"],
+scripts/heavy_secure_search.py:83:            risk_budget=params["risk_budget"],
+scripts/heavy_secure_search.py:188:        "risk_budget": rng.uniform(0.08, 0.48),
+scripts/heavy_secure_search.py:207:            for risk_budget in [0.10, 0.14, 0.18, 0.22, 0.30, 0.38]:
+scripts/heavy_secure_search.py:219:                    "risk_budget": risk_budget,
+aegis_router/solvers.py:15:    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+aegis_router/solvers.py:21:    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+aegis_router/solvers.py:30:    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+aegis_router/solvers.py:51:    risk_budget: float = 0.35
+aegis_router/solvers.py:56:    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+aegis_router/solvers.py:63:            m = graph.metrics(packet.node, nb)
+aegis_router/solvers.py:65:            if projected <= self.risk_budget or nb == packet.dst:
+aegis_router/solvers.py:84:    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+aegis_router/solvers.py:105:    risk_budget: float = 0.30
+aegis_router/solvers.py:138:            self.risk_budget = min(self.max_budget, self.risk_budget + self.adapt_step)
+aegis_router/solvers.py:140:            self.risk_budget = max(self.min_budget, self.risk_budget - self.adapt_step)
+aegis_router/solvers.py:185:        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+aegis_router/solvers.py:195:            "risk_budget": self.risk_budget,
+aegis_router/solvers.py:226:    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+aegis_router/solvers.py:234:class EdgeLearningSolver(PersistentLearningSolver):
+aegis_router/solvers.py:242:    edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+aegis_router/solvers.py:248:        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+aegis_router/solvers.py:255:            self.edge_scores[(int(left), int(right))] = PeerScore(**value)
+aegis_router/solvers.py:261:            "risk_budget": self.risk_budget,
+aegis_router/solvers.py:263:            "edges": {f"{a}->{b}": asdict(v) for (a, b), v in self.edge_scores.items()},
+aegis_router/solvers.py:287:        score = self.edge_scores[(from_node, neighbor)]
+aegis_router/solvers.py:301:    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+aegis_router/solvers.py:303:        edge_badness = self.edge_scores[(packet.node, nb)].badness
+aegis_router/solvers.py:312:    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+
+    edge_penalty: float = 0.7
+    edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+
+    def load(self) -> None:
+        if not Path(self.state_path).exists():
+            return
+        data = json.loads(Path(self.state_path).read_text())
+        self.risk_budget = float(data.get("risk_budget", self.risk_budget))
+        for key, value in data.get("peers", {}).items():
+            node = int(key)
+            self.peer_scores[node] = PeerScore(**value)
+            self.peer_risk[node] = self.peer_scores[node].badness
+        for key, value in data.get("edges", {}).items():
+            left, right = key.split("->", 1)
+            self.edge_scores[(int(left), int(right))] = PeerScore(**value)
+
+    def save(self) -> None:
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "version": 2,
+            "risk_budget": self.risk_budget,
+            "peers": {str(k): asdict(v) for k, v in self.peer_scores.items()},
+            "edges": {f"{a}->{b}": asdict(v) for (a, b), v in self.edge_scores.items()},
+        }
+        self.state_path.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+    def observe_result(
+        self,
+        *,
+        neighbor: NodeId,
+        delivered: bool,
+        dropped: bool,
+        touched_sybil: bool = False,
+        reason: str | None = None,
+        from_node: NodeId | None = None,
+    ) -> None:
+        super().observe_result(
+            neighbor=neighbor,
+            delivered=delivered,
+            dropped=dropped,
+            touched_sybil=touched_sybil,
+            reason=reason,
+            from_node=from_node,
+        )
+        if from_node is None:
+            return
+        score = self.edge_scores[(from_node, neighbor)]
+        if delivered:
+            score.delivered += 1
+        if dropped:
+            score.drops += 1
+        if touched_sybil:
+            score.sybil_touches += 1
+        if reason == "link_loss":
+            score.link_losses += 1
+        elif reason == "loop":
+            score.loops += 1
+        elif reason == "ttl_expired":
+            score.ttl_expired += 1
+
+    def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+        assert packet.node is not None
+        edge_badness = self.edge_scores[(packet.node, nb)].badness
+        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
+
+
+@dataclass
+class QLocalSolver:
+    agent: QRoutingAgent
+    train: bool = False
+
+    def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
+        assert packet.node is not None
+        return self.agent.choose(graph, packet.node, packet.dst, train=self.train, visited=packet.visited)
+
+exec
+/usr/bin/zsh -lc "git branch --list 'arbor/trunk/aegis-router-20260621' 'coordinator/*' --verbose --no-abbrev && git show --stat --oneline dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea" in /home/ghost/projects/aegis-router
+ exited 128 in 0ms:
++ coordinator/n6-mechanism-adversarial-domain-ran-0a7b855f 1146f2230aca3854ba095a30e9456826fed49a29 experiment: add domain-randomized routing curriculum
+fatal: bad object dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea
+
+codex
+LOAD_RECEIPT: # SKILL: Idea Drafting
+
+PROBE BLOCK  
+Q1 First principles: wrong representation of adverse evidence — node 9 reduced Sybil exposure but lost `0.00718` delivery; node 10 improved every B_dev routing metric yet lost `0.00916` on B_test.  
+Q2 Hidden assumption: absolute edge badness is comparable across local regimes — if dropped, evidence can be judged relative to currently available sibling routes.  
+Q3 Elephant: high-Sybil pressure raises background failure evidence broadly, so global priors and absolute penalties can suppress all viable routes together.  
+Q4 Hamming: yes — repeated dev winners fail held-out because their evidence scale transfers poorly, not because the router lacks another penalty knob.
+
+The surviving hypothesis uses sibling-relative posterior evidence: penalize only edges demonstrably worse than alternatives at the same forwarding decision, with sparse evidence shrinking to the local baseline. This differs from global priors, hidden hazard models, and unconditional diversification.
+exec
+/usr/bin/zsh -lc 'python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py add --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --parent-id ROOT --hypothesis $'"'Mechanism: Sibling-relative posterior evidence with local competitive shrinkage\\nHypothesis: Calibrate each directional edge against the observed evidence distribution of its currently available sibling routes, so broad regime-wide failure pressure cancels out while locally exceptional adversarial edges still receive a bounded penalty.\\nObservable: B_dev robust_score exceeds 0.684530 while preserving delivery and reducing mean/max Sybil exposure; gains should arise without absolute global priors or action deletion.\\nConflicts: pruned [10] showed fixed global empirical priors fail under distribution shift and pruned [6] showed coarse context statistics reduce delivery; this counters via decision-local relative evidence over concrete alternatives.'" in /home/ghost/projects/aegis-router
+ succeeded in 106ms:
+exec
+/usr/bin/zsh -lc "python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py update --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --node-id 11 --status running && python3 /home/ghost/.codex/skills/arbor-agent-tools/scripts/arbor_state.py prompt-executor --cwd /home/ghost/projects/aegis-router --run-name aegis-router-20260621 --node-id 11 --workdir /tmp/aegis-arbor-node11-cycle11-20260622 --output /home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/experiments/11/executor_prompt.md && sed -n '1,260p' .arbor/sessions/aegis-router-20260621/experiments/11/executor_prompt.md" in /home/ghost/projects/aegis-router
+ succeeded in 175ms:
+## Codebase
+
+Working directory: /tmp/aegis-arbor-node11-cycle11-20260622
+
+## Git Isolation
+
+Work in the assigned experiment branch/worktree. Do not switch back to the main repository for implementation or evaluation.
+
+## Research Idea
+
+**ID**: 11
+**Hypothesis**:
+Mechanism: Sibling-relative posterior evidence with local competitive shrinkage
+Hypothesis: Calibrate each directional edge against the observed evidence distribution of its currently available sibling routes, so broad regime-wide failure pressure cancels out while locally exceptional adversarial edges still receive a bounded penalty.
+Observable: B_dev robust_score exceeds 0.684530 while preserving delivery and reducing mean/max Sybil exposure; gains should arise without absolute global priors or action deletion.
+Conflicts: pruned [10] showed fixed global empirical priors fail under distribution shift and pruned [6] showed coarse context statistics reduce delivery; this counters via decision-local relative evidence over concrete alternatives.
+
+## Evaluation Info
+
+- **Evaluation command (B_dev)**: `cd /tmp/aegis-arbor-node11-cycle11-20260622 && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split dev`
+- **Evaluation command (B_test, do not use for routine experiments)**: `cd /tmp/aegis-arbor-node11-cycle11-20260622 && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split test`
+- **Dataset info**: dev: multi-scenario fixed benchmark from refine_edge_multiscenario.py (n120_d6_s08_t36, n120_d6_s10_t36, n80_d4_s10_t30, n200_d6_s08_t36, n120_d8_s10_t48) with seeds 20260612-20260614; test: held-out n120_d6_s15_t30 with seeds 20270612-20270614; objective sybil_stress; score is robust_score from benchmark_eval.py
+- **Baseline score**: 0.6355613879111393
+- **Current trunk score**: 0.6845301005442892
+
+Use B_dev for final experiment scoring. Do NOT use B_test.
+
+## Insights From Prior Experiments
+
+- ROOT: Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.
+
+## Instructions
+
+1. Understand the code before editing.
+2. Implement the idea faithfully.
+3. Run quick checks to ensure the new logic is active.
+4. Iterate on implementation bugs.
+5. Run the B_dev evaluation when credible.
+6. Report Changes, Baseline vs Result, Score, and Insight. The score must be the absolute primary metric, not a delta.
+
+Save results to `results/11-<brief-description>/`.
+## Codebase
+
+Working directory: /tmp/aegis-arbor-node11-cycle11-20260622
+
+## Git Isolation
+
+Work in the assigned experiment branch/worktree. Do not switch back to the main repository for implementation or evaluation.
+
+## Research Idea
+
+**ID**: 11
+**Hypothesis**:
+Mechanism: Sibling-relative posterior evidence with local competitive shrinkage
+Hypothesis: Calibrate each directional edge against the observed evidence distribution of its currently available sibling routes, so broad regime-wide failure pressure cancels out while locally exceptional adversarial edges still receive a bounded penalty.
+Observable: B_dev robust_score exceeds 0.684530 while preserving delivery and reducing mean/max Sybil exposure; gains should arise without absolute global priors or action deletion.
+Conflicts: pruned [10] showed fixed global empirical priors fail under distribution shift and pruned [6] showed coarse context statistics reduce delivery; this counters via decision-local relative evidence over concrete alternatives.
+
+## Evaluation Info
+
+- **Evaluation command (B_dev)**: `cd /tmp/aegis-arbor-node11-cycle11-20260622 && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split dev`
+- **Evaluation command (B_test, do not use for routine experiments)**: `cd /tmp/aegis-arbor-node11-cycle11-20260622 && python3 .arbor/sessions/aegis-router-20260621/benchmark_eval.py --split test`
+- **Dataset info**: dev: multi-scenario fixed benchmark from refine_edge_multiscenario.py (n120_d6_s08_t36, n120_d6_s10_t36, n80_d4_s10_t30, n200_d6_s08_t36, n120_d8_s10_t48) with seeds 20260612-20260614; test: held-out n120_d6_s15_t30 with seeds 20270612-20270614; objective sybil_stress; score is robust_score from benchmark_eval.py
+- **Baseline score**: 0.6355613879111393
+- **Current trunk score**: 0.6845301005442892
+
+Use B_dev for final experiment scoring. Do NOT use B_test.
+
+## Insights From Prior Experiments
+
+- ROOT: Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.
+
+## Instructions
+
+1. Understand the code before editing.
+2. Implement the idea faithfully.
+3. Run quick checks to ensure the new logic is active.
+4. Iterate on implementation bugs.
+5. Run the B_dev evaluation when credible.
+6. Report Changes, Baseline vs Result, Score, and Insight. The score must be the absolute primary metric, not a delta.
+
+Save results to `results/11-<brief-description>/`.
+
+codex
+Node 11 is now the single selected leaf and is marked `running`. I’m dispatching it to an isolated executor workspace; the executor owns implementation, focused tests, bounded calibration, and one full B_dev evaluation. B_test remains prohibited unless the candidate beats trunk.
+2026-06-22T18:03:07.787703Z ERROR codex_core::tools::router: error=Full-history forked agents inherit the parent agent type, model, and reasoning effort; omit agent_type, model, and reasoning_effort, or spawn without a full-history fork.
+collab: SpawnAgent
+collab: SpawnAgent
+exec
+/usr/bin/zsh -lc "sed -n '1,280p' .arbor/sessions/aegis-router-20260621/REPORT.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+# Research Report: Optimize Aegis Router routing logic for adversarial dynamic networks. Maximize delivery, minimize...
+
+## Results
+
+- B_dev baseline: `0.6356`
+- B_dev final trunk: `0.6845`
+- B_test baseline: `0.3`
+- B_test final trunk: `0.4243`
+
+## Exploration
+
+- Nodes total: `10`
+- Scored nodes: `9`
+- Merged nodes: `0`
+
+### Top Ideas By Score
+
+- **1** `0.6959` _pruned_: Mechanism: CVaR tail-risk scorer over fixed scenario windows Hypothesis: optimize the lower tail of delivery and the ...
+- **10** `0.6933` _pruned_: Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage Hypothesis: Shrink sparse edge fa...
+- **3** `0.6875` _pruned_: Mechanism: Pheromone-repulsion memory with fast decay Hypothesis: reinforce successful edges like ant pheromones, but...
+- **7** `0.687` _pruned_: Mechanism: Concentration-aware route diversification with local structural suspicion Hypothesis: penalize repeated de...
+- **8** `0.6828` _pruned_: Mechanism: Viability-shielded routing with a control-barrier action filter Hypothesis: Filter high-risk neighbors onl...
+- **5** `0.6816` _pruned_: Mechanism: Path-level eligibility traces for delayed routing feedback Hypothesis: distribute terminal delivery, drop,...
+- **6** `0.6744` _pruned_: Mechanism: Adversarial domain-randomized learning curriculum Hypothesis: train persistent edge memory across procedur...
+- **4** `0.667` _pruned_: Mechanism: Two-profile bandit selector over edge routing policies Hypothesis: switch between the delivery-heavy and s...
+- **9** `0.667` _pruned_: Mechanism: Cause-specific feedback router with competing delivery and adversary evidence channels Hypothesis: Separat...
+
+## Global Insight
+
+Confidence calibration is a real B_dev improvement axis, but even conservative empirical-Bayes shrinkage failed held-out high-Sybil verification. Future work should avoid fixed global prior transfer and condition confidence on local regime or topology without using hidden labels.
+
+## Artifacts
+
+- Idea tree JSON: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.json`
+- Idea tree Markdown: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.md`
+- Experiments: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/experiments`
+
+exec
+/usr/bin/zsh -lc 'tail -20 .arbor/sessions/aegis-router-20260621/events.jsonl && jq . .arbor/sessions/aegis-router-20260621/run_stats.json' in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":7,"node_id":"7","decision":"prune","timestamp":"2026-06-22T00:27:15+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":7,"phase":"cycle_end","timestamp":"2026-06-22T00:27:16+02:00"}
+{"event":"session.resume","run_name":"aegis-router-20260621","detail":"Reconciled durable tree, experiment reports, worktrees, and processes; no stale running node or live executor remained.","timestamp":"2026-06-22T19:08:00+02:00"}
+{"event":"cycle.start","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","timestamp":"2026-06-22T19:09:00+02:00"}
+{"event":"idea.proposed","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","timestamp":"2026-06-22T19:09:01+02:00"}
+{"event":"idea.proposed","run_name":"aegis-router-20260621","cycle":8,"node_id":"9","timestamp":"2026-06-22T19:09:02+02:00"}
+{"event":"executor.start","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","isolation":"/tmp/aegis-arbor-node8-20260622","timestamp":"2026-06-22T19:10:00+02:00"}
+{"event":"executor.end","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","tests_passed":11,"b_dev":0.6828301562815761,"timestamp":"2026-06-22T19:15:00+02:00"}
+{"event":"idea.completed","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","b_dev":0.6828301562815761,"timestamp":"2026-06-22T19:16:00+02:00"}
+{"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","reason":"B_dev below validated trunk; B_test not run.","timestamp":"2026-06-22T19:16:01+02:00"}
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":8,"node_id":"8","decision":"prune","timestamp":"2026-06-22T19:17:00+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":8,"phase":"cycle_end","timestamp":"2026-06-22T19:17:47+02:00"}
+{"event":"session.resume","run_name":"aegis-router-20260621","detail":"Reconciled durable tree, reports, worktrees, and processes; no stale running node or live executor remained.","timestamp":"2026-06-22T19:20:00+02:00"}
+{"event":"cycle.start","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","timestamp":"2026-06-22T19:21:00+02:00"}
+{"event":"executor.start","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","isolation":"/tmp/aegis-arbor-node9-cycle9-20260622","timestamp":"2026-06-22T19:22:00+02:00"}
+{"event":"executor.end","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","focused_tests_passed":7,"b_dev":0.666964541596115,"timestamp":"2026-06-22T19:32:00+02:00"}
+{"event":"idea.completed","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","b_dev":0.666964541596115,"timestamp":"2026-06-22T19:32:30+02:00"}
+{"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","reason":"B_dev below validated trunk; B_test not run.","timestamp":"2026-06-22T19:33:00+02:00"}
+{"event":"cycle.end","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","decision":"prune","timestamp":"2026-06-22T19:33:30+02:00"}
+{"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":9,"phase":"cycle_end","timestamp":"2026-06-22T19:33:51+02:00"}
+{
+  "run_name": "aegis-router-20260621",
+  "cycles_completed_total": 10,
+  "cycles_completed_this_resume": 1,
+  "nodes_total": 11,
+  "nodes_merged": 0,
+  "nodes_pruned": 10,
+  "nodes_pending": 0,
+  "baseline_b_dev": 0.6355613879111393,
+  "trunk_b_dev": 0.6845301005442892,
+  "baseline_b_test": 0.2999592574075973,
+  "trunk_b_test": 0.42429066273896465,
+  "last_node": "10",
+  "last_decision": "pruned",
+  "last_candidate_b_dev": 0.6933176702330417,
+  "last_candidate_b_test": 0.4151347276777513,
+  "exit_reason": "One complete coordinator cycle finished; pacing delegated to external supervisor."
+}
+
+exec
+/usr/bin/zsh -lc "git status --short && git diff -- scripts/refine_edge_multiscenario.py | sed -n '1,220p'" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+ M scripts/refine_edge_multiscenario.py
+?? .arbor/
+?? deploy/
+?? docs/ARBOR_DAEMON.md
+?? results/
+?? scripts/arbor_daemon.sh
+?? scripts/arbor_daemon_prompt.md
+diff --git a/scripts/refine_edge_multiscenario.py b/scripts/refine_edge_multiscenario.py
+index f9cd514..0f75769 100644
+--- a/scripts/refine_edge_multiscenario.py
++++ b/scripts/refine_edge_multiscenario.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python3
+ """Refine the best Aegis edge profile across multiple scenarios.
+ 
+-This is a mutation-based optimizer around profiles/aegis-prod-edge-v1.json.
++This is a mutation-based optimizer around profiles/aegis-global-edge-v3.json.
+ It optimizes for robust global performance, not just one lucky scenario.
+ """
+ from __future__ import annotations
+@@ -299,8 +299,8 @@ def diverse_elite_ids(rows: list[dict[str, Any]], limit: int) -> list[int]:
+ 
+ def main() -> None:
+     ap = argparse.ArgumentParser()
+-    ap.add_argument("--base-profile", default="profiles/aegis-prod-edge-v1.json")
+-    ap.add_argument("--parent-top10", default="docs/results/heavy_score_max_top10.csv")
++    ap.add_argument("--base-profile", default="profiles/aegis-global-edge-v3.json")
++    ap.add_argument("--parent-top10", default="docs/results/refine_edge_global_v2_top10.csv")
+     ap.add_argument("--candidates", type=int, default=8192)
+     ap.add_argument("--stage1-seeds", type=int, default=3)
+     ap.add_argument("--stage2-seeds", type=int, default=20)
+@@ -308,10 +308,10 @@ def main() -> None:
+     ap.add_argument("--top-k", type=int, default=160)
+     ap.add_argument("--final-k", type=int, default=24)
+     ap.add_argument("--workers", type=int, default=max(1, os.cpu_count() or 1))
+-    ap.add_argument("--outdir", default="runs/refine_edge_global_v1")
++    ap.add_argument("--outdir", default="runs/refine_edge_global_v3")
+     ap.add_argument("--seed", type=int, default=20260612)
+     ap.add_argument("--scenario-limit", type=int, default=0, help="for smoke tests only")
+-    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="balanced")
++    ap.add_argument("--objective", choices=["balanced", "sybil_stress", "delivery_stress"], default="sybil_stress")
+     ap.add_argument("--selection", choices=["scalar", "diverse"], default="diverse")
+     args = ap.parse_args()
+     outdir=Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)
+
+collab: Wait
+ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Jun 23rd, 2026 12:08 AM.
+ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Jun 23rd, 2026 12:08 AM.
+tokens used
+93 257

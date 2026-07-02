@@ -1,0 +1,954 @@
+OpenAI Codex v0.142.0
+--------
+workdir: /home/ghost/projects/aegis-router
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019ef661-d483-7a21-9742-97189f0f994d
+--------
+user
+# Aegis Router — autonomous Arbor continuation
+
+Use `$arbor-research-agent` and resume the durable Arbor session
+`aegis-router-20260621` in `/home/ghost/projects/aegis-router`.
+
+Run exactly one complete coordinator cycle, then exit cleanly so the external
+supervisor can enforce pacing and restart the next cycle.
+
+Rules:
+
+- Resume existing state; never restart intake or erase prior experiments.
+- First reconcile stale `running` nodes with their existing reports, files,
+  processes, and metrics.
+- Use B_dev for iteration. Use B_test only once for a candidate that beats the
+  current trunk on B_dev and is ready for merge verification.
+- Never optimize against B_test results.
+- Do not modify protected benchmark scenarios, evaluation scripts, existing
+  tests, seeds, or metric formulas.
+- Preserve existing APIs and keep existing tests green.
+- Implement experiments through isolated executor agents/worktrees when
+  possible.
+- Keep rejected experiments as reports/branches, but remove their candidate
+  code from the active working tree.
+- Never push, force-push, create a pull request, delete branches, or publish
+  externally.
+- Do not install system packages or request interactive input.
+- Prefer lightweight, deterministic, measurable mechanisms.
+- If no pending node exists, inspect constraints, use the strict ideation gate,
+  add 1–3 genuinely new hypotheses, select one, and execute it.
+- Record the completed node, propagate insights, and update the durable report
+  before exiting.
+
+Current validated trunk:
+
+- B_dev: `0.6845301005442892`
+- B_test: `0.42429066273896465`
+- profile: `profiles/aegis-global-edge-v3.json`
+
+Primary objective: improve held-out delivery and robustness while reducing
+Sybil exposure, packet loss, latency, and route length across dynamic
+adversarial networks.
+
+codex
+I’ll resume the existing Arbor session and keep this to one coordinator cycle. I’m going to load the Arbor orchestration instructions first, then inspect the durable session state before touching code.
+exec
+/usr/bin/zsh -lc "sed -n '1,240p' /home/ghost/.codex/skills/arbor-research-agent/SKILL.md" in /home/ghost/projects/aegis-router
+exec
+/usr/bin/zsh -lc "sed -n '1,260p' /home/ghost/.codex/skills/arbor-agent-orchestrator/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-research-agent
+description: "Public entrypoint for the Arbor skill suite. Use when a user wants to run an Arbor-style autonomous research or optimization workflow from a natural-language goal, including initial clarification of objective, target project, data, metric, evaluation, permissions, budget, run mode, and then automatic bootstrapping into arbor-agent-orchestrator and phase skills."
+---
+
+# Arbor Research Agent
+
+Use this as the single user-facing entrypoint. The user should be able to say
+`$arbor-research-agent` plus a plain-language goal, similar to using `arbor`,
+without knowing the internal phase skills.
+
+This skill performs Arbor-style intake and clarification, then hands control to
+`arbor-agent-orchestrator`.
+
+## Entry Protocol
+
+1. Treat the launch cwd as the default target project unless the user names a
+   different path.
+2. Read available local context before asking: README summaries, config/eval
+   hints, cached metrics, dataset notes, and git state.
+3. Decide whether the request is clear enough to start. If not, ask concise
+   Arbor-style clarification questions before optimizing.
+4. Once the contract is clear, load `arbor-agent-orchestrator` and continue
+   with its phase loading order.
+
+Do not ask for information that can be discovered safely from local files.
+Ask only for decisions, permissions, missing objectives, or ambiguous tradeoffs.
+
+## Intake Context Budget
+
+Keep wrapper intake small. Its job is to determine the run contract, not to
+fully analyze the target project.
+
+- Start with `pwd`, git branch/status, `rg --files`, and concise slices such as
+  README/config/eval metadata.
+- Use `rg` to locate metric/eval/data hints before opening files. Prefer
+  focused `sed -n` ranges over full-file reads.
+- Do not bulk-read long logs, notebooks, lockfiles, generated outputs, or large
+  source files during wrapper intake.
+- For training logs or progress logs, avoid raw `cat`, raw `grep`, or broad
+  `tail`. If `arbor-agent-tools` is available, use `arbor_state.py parse-log`;
+  otherwise normalize carriage returns with `tr '\r' '\n'` and inspect only the
+  metric lines needed for the contract.
+- Defer deep code reading to `arbor-agent-setup-intake`, `arbor-agent-executor`,
+  or the relevant phase skill after the orchestrator is loaded.
+
+## Clarification Gate
+
+If any of these are missing or ambiguous after local inspection, ask before
+starting the optimization loop:
+
+- **Target**: project directory, repo branch, and whether the current branch is
+  acceptable.
+- **Objective**: what should improve and whether the run is maximize/minimize.
+- **Metric/eval**: command, score field, B_dev/B_test split, and whether cached
+  baseline evidence may be used.
+- **Data**: data location, protected/private paths, and whether preparation or
+  downloads are allowed.
+- **Permissions**: whether source edits, worktrees, commits, package installs,
+  internet, GPU jobs, long training, and merge attempts are allowed.
+- **Budget**: smoke vs real run, max cycles, wall-clock/training budget, and
+  stop condition.
+- **Scope preference**: novelty-leaning, effect-leaning, performance-first, or
+  mixed.
+- **Human gates**: auto, direction, review, or collaborative mode.
+
+Ask as one compact checkpoint, not a long interview. Example:
+
+```text
+I can start, but I need these defaults confirmed:
+- target: <cwd>
+- objective/metric: <inferred metric, direction>
+- eval: <inferred command or unknown>
+- run mode: smoke / real
+- permissions: may edit code? may run training/GPU? may install packages?
+- budget: <cycles/time>
+
+Reply "yes" to accept, or edit any line.
+```
+
+If the user already gave enough information or explicitly says to use defaults,
+do not block on extra confirmation. Proceed with the best conservative contract.
+
+## Contract To Pass Down
+
+Before loading the orchestrator, form a concise contract containing:
+
+- target cwd and git branch;
+- instruction/task;
+- metric name and direction;
+- B_dev/B_test policy;
+- baseline status;
+- eval command or smoke/cached parser;
+- protected files and allowed edit surface;
+- run mode and budget;
+- user interaction mode;
+- any unresolved caveats.
+
+Then load `arbor-agent-orchestrator` and pass this contract as the run
+instruction. The orchestrator owns phase loading from that point.
+
+## Run Mode Defaults
+
+- If the user asks to "try", "test", "validate", "demo", or "see behavior",
+  default to smoke-only.
+- If the project eval is known to run training, downloads, GPU jobs, or
+  minute-scale work, ask before running it.
+- In smoke mode, load `arbor-agent-tools` when native Arbor tools are absent,
+  use cached metrics or `arbor_state.py parse-log`, generate
+  `prompt-executor --smoke`, then run `check`, `report`, and a final
+  artifact-level `check`.
+- In real mode, still complete setup and contract confirmation before any long
+  eval, training, package install, or merge.
+
+## Bootstrap Sequence
+
+After intake:
+
+1. Load `arbor-agent-orchestrator`.
+2. Ensure `arbor-agent-setup-intake` receives the contract.
+3. Let the orchestrator load phase skills as needed:
+   - `arbor-agent-coordinator`
+   - `arbor-agent-ideate`
+   - `arbor-agent-executor`
+   - `arbor-agent-merge-eval`
+   - `arbor-agent-search`
+   - `arbor-agent-plugins-hitl-budget`
+   - `arbor-agent-resume-report`
+   - `arbor-agent-tools`
+4. Keep the user-facing behavior at the Arbor level. Do not expose internal
+   skill mechanics unless useful for debugging or reporting.
+
+## Expected User Experience
+
+The user can write:
+
+```text
+$arbor-research-agent optimize this repo for leaderboard score overnight
+```
+
+or:
+
+```text
+$arbor-research-agent try a simplified smoke run on this autoresearch repo
+```
+
+Expected behavior:
+
+- inspect project and infer what can be inferred;
+- ask a compact clarification/permission checkpoint if needed;
+- create or select `.arbor/sessions/<run_name>/`;
+- initialize durable Idea Tree state;
+- run the Arbor loop through orchestrator and phase skills;
+- use executor/worktree/report discipline rather than ad hoc edits;
+- keep B_test protected;
+- stop according to budget or smoke instruction;
+- report durable artifacts and caveats.
+- once `REPORT.md` and expected smoke artifacts exist, stop promptly with a
+  concise final response instead of continuing to polish reports or run extra
+  cycles.
+
+## Hard Rules
+
+- Do not begin optimization when objective, edit permissions, or expensive eval
+  permission is genuinely ambiguous.
+- Do not run training, data downloads, package installs, GPU jobs, or long eval
+  commands before the user has allowed them or the contract clearly permits
+  them.
+- Do not use B_test for routine iteration.
+- Do not modify protected data/eval/private paths.
+- Do not bypass the orchestrator after intake; this skill is the public shell,
+  not a second coordinator implementation.
+- Do not spend wrapper context recreating setup, coordinator, or executor logic;
+  once the contract is clear, load the orchestrator.
+- Do not continue running after the requested budget is complete and final
+  artifacts have been validated. Finalize with artifact paths, scores, and
+  caveats.
+
+ succeeded in 0ms:
+---
+name: arbor-agent-orchestrator
+description: "Top-level controller for recreating the open-source AutoResearch workflow as a suite of skills. Use when the user asks to run, emulate, extract, validate, or refine Arbor/AutoResearch behavior, especially when a coordinator must load phase skills for setup, ideation, executors, merge evaluation, novelty search, plugins, resume, and reports."
+---
+
+# Arbor Agent Orchestrator
+
+Use this as the first skill for an Arbor-style research run. It is the phase
+loader and policy owner; load the smaller skills only when their phase applies.
+For normal user-facing use, prefer starting with `arbor-research-agent`; that
+wrapper performs Arbor-style intake and then loads this orchestrator.
+
+## Source Model
+
+This suite mirrors the `open-source` branch of `arbor`, not the older
+single hypothesis-tree extraction. The product entry point is `arbor`; the run
+architecture is:
+
+- Intake/planning agent creates a research contract.
+- Coordinator runs one persistent ReAct loop and owns the Idea Tree.
+- Executors implement ideas in isolated git worktrees.
+- Merge/eval tooling protects B_test and trunk.
+- SearchAgent annotates validated nodes with related work.
+- Plugins, HITL, budget policy, checkpoint/resume, dashboard, and report are
+  first-class behavior, not optional notes.
+
+Read `references/source-map.md` when auditing against the source tree or when
+you need exact file origins.
+Read `references/compatibility.md` when packaging the suite for another agent
+runtime or checking Codex/Claude Code portability.
+
+## Phase Loading Order
+
+1. **Launch and contract**: load `arbor-agent-setup-intake`.
+   Establish target cwd, metric, baseline status, budget, scope preference,
+   dev/test discipline, config/plugin choice, and session directory.
+
+2. **Coordinator loop**: load `arbor-agent-coordinator`.
+   Run INIT, OBSERVE, IDEATE, SELECT, DISPATCH, DECIDE until the cycle cap,
+   budget limit, or diminishing returns says to stop.
+
+3. **IDEATE only**: load `arbor-agent-ideate`.
+   This is a hard gate for novelty/scientific runs. It must follow
+   `TreeView(format="constraints")` and precede every `TreeAddNode`. If a
+   plugin disables strict skills for performance-first MLE/Kaggle, use the
+   free-form path described by `arbor-agent-plugins-hitl-budget` instead.
+
+4. **Executor dispatch**: load `arbor-agent-executor`.
+   Use for `RunExecutor` / `RunExecutorParallel` behavior, worktree lifecycle,
+   executor prompts, long `RunTraining` commands, report parsing, artifact
+   capture, and tree updates.
+
+5. **Merge and scoring**: load `arbor-agent-merge-eval`.
+   Use before baseline metadata changes, merge attempts, B_test verification,
+   protected-path checks, and final test scoring.
+
+6. **Related work**: load `arbor-agent-search`.
+   Use after a node is `done` or `merged` and beat trunk, especially before
+   merge decisions where novelty matters.
+
+7. **Domain adaptation and human gates**: load
+   `arbor-agent-plugins-hitl-budget` when config mentions plugins, profiles,
+   `mle_kaggle`, lifecycle hooks, convergence, budget policy, or
+   interaction modes `direction`, `review`, or `collaborative`.
+
+8. **Resume and finalization**: load `arbor-agent-resume-report` when the run
+   is interrupted/resumed, when dashboard/events/checkpoint artifacts matter,
+   or when producing `REPORT.md`.
+
+9. **No native Arbor tools**: load `arbor-agent-tools`.
+   Use its `scripts/arbor_state.py` helper to emulate `TreeView`,
+   `TreeAddNode`, `TreeSetMeta`, `TreeUpdateNode`, `TreePrune`,
+   `TreePropagate`, executor prompt generation, eval score capture, merge
+   checks, and report generation in a plain Codex/Claude environment.
+
+## Non-Negotiable Invariants
+
+- As coordinator, do not write benchmark code directly. Code changes happen
+  through executor branches or clearly separated executor subagents.
+- Maintain an Idea Tree as durable memory. Do not rely on transient chat
+  reasoning for run state.
+- Record `baseline_score`, `trunk_score`, `eval_cmd`, `eval_cmd_test`,
+  `dataset_info`, `metric_direction`, and `trunk_branch` as metadata before
+  dispatching real executors.
+- Use B_dev for iteration. Use B_test only for merge verification and final
+  reporting when the contract permits B_test and the run is not smoke-only.
+- Use eval command templates with `{cwd}` and `{node_id}`. Do not hardcode the
+  main repository path inside executor eval commands.
+- Keep main/master protected. Merge only into the configured trunk branch.
+- If using `arbor_state.py`, run tree-mutating commands serially. Do not
+  parallelize `init`, `meta`, `add`, `update`, `prune`, `propagate`, `eval`,
+  `record`, `worktree`, or `merge` against the same run.
+- Preserve evidence: experiment reports, metrics, diffs, event logs, tree JSON,
+  tree Markdown, run stats, and final report.
+- If the real `arbor` CLI is installed and the user wants a real run, prefer
+  invoking it. If the user wants a skill-based reconstruction or a smoke test,
+  emulate the behavior with this suite and `arbor-agent-tools`.
+
+## Smoke And Forward-Test Mode
+
+When the user asks for a smoke test, forward test, dry run, or validation of
+the skill suite, propagate `smoke-only` through the contract, metadata,
+executor prompt, raw reports, and final summary.
+
+- Do not execute inherited real eval commands if they run training, data prep,
+  downloads, GPU jobs, or minute-scale benchmarks.
+- Replace expensive eval commands with `arbor_state.py parse-log`, another
+  cached-score parser, a harmless echo, or an explicitly labelled mocked score
+  for plumbing validation.
+- Do not `cat`, raw `rg`, raw `grep`, or `tail` long training logs. Some logs
+  use carriage-return progress updates that make one physical line enormous.
+  Use `arbor_state.py parse-log` or normalize with `tr '\r' '\n'` before
+  matching; only inspect at most 20 log lines when debugging a failure.
+- Generate executor prompts with `arbor_state.py prompt-executor --smoke`.
+  Save the generated prompt as `experiments/<node_id>/executor_prompt.md`.
+- Do not create real worktrees, edit source, or merge branches unless the user
+  explicitly wants a real run.
+- Still complete the durable Arbor artifacts: tree JSON/Markdown, experiment
+  report/metrics, executor prompt, `check`, and `REPORT.md`.
+
+## Minimal Run Skeleton
+
+Use this skeleton when no native `arbor` runtime is available:
+
+1. Load `arbor-agent-setup-intake`; produce a contract and initialize
+   `.arbor/sessions/<run_name>/.coordinator/idea_tree.json`.
+2. Load `arbor-agent-coordinator`; complete INIT and metadata.
+3. For each cycle:
+   - OBSERVE code/results.
+   - `TreeView(format="constraints")`.
+   - Load `arbor-agent-ideate`; add 1-3 ideas.
+   - SELECT pending leaves.
+   - Load `arbor-agent-executor`; dispatch one or more executors.
+   - Load `arbor-agent-search` for validated winners when useful.
+   - Load `arbor-agent-merge-eval`; merge, prune, or continue.
+4. Load `arbor-agent-resume-report`; run final B_test only if it is available,
+   authorized, and the run is not smoke-only; write `REPORT.md`; summarize
+   artifact paths.
+
+## Common Failure Corrections
+
+- If only one monolithic skill exists, split it by the phase list above.
+- If ideation starts without constraints and the idea-drafting gate, restart
+  IDEATE from `TreeView(format="constraints")`.
+- If an executor evaluates in the main repo rather than its worktree, discard
+  that score and rerun with `{cwd}` substitution.
+- If B_test is used for routine idea selection, mark the run contaminated and
+  reset the decision basis to B_dev.
+- If reports contain deltas only, convert tree scores to absolute metric
+  values.
+
+exec
+/usr/bin/zsh -lc "sed -n '1,260p' /home/ghost/.codex/skills/arbor-agent-resume-report/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-agent-resume-report
+description: "Resume, checkpoint, event, dashboard, finalization, and report phase for Arbor. Use when continuing interrupted sessions, handling running-node requeue, writing checkpoints/messages, consuming events.jsonl/run_stats, recovering best submissions, generating REPORT.md, or summarizing durable artifacts."
+---
+
+# Arbor Resume And Report
+
+Use this when a run stops, resumes, times out, or needs a durable report.
+
+## Checkpoint Files
+
+Open-source Arbor stores the run under:
+
+```text
+.arbor/sessions/<run_name>/
+  .coordinator/
+    idea_tree.json
+    idea_tree.md
+    checkpoint.json
+    messages.jsonl
+  events.jsonl
+  run_stats.json
+  REPORT.md
+```
+
+`idea_tree.json` is the primary state. `messages.jsonl` restores conversation
+history. `checkpoint.json` stores run name, cycle number, phase, git state,
+in-flight executors, cache anchors, and pending human gates.
+
+## Resume Procedure
+
+1. Require an existing `.coordinator/idea_tree.json`.
+2. Load the tree.
+3. Requeue nodes left as `running` by setting them back to `pending`.
+4. Replay `messages.jsonl` if available.
+5. Seal any dangling tool-use tail with an interrupted-result marker.
+6. Append a short resume nudge:
+   - do not restart INIT;
+   - call `TreeView`;
+   - continue the loop from pending nodes.
+7. Keep the existing workspace/session directory.
+
+If the tree is corrupt, do not pretend resume is possible. Start a fresh run
+in a clean session only after making that explicit.
+
+## Events
+
+Important event families:
+
+- `session.start`, `session.end`, `session.checkpoint`
+- `cycle.start`, `cycle.end`, `cycle.phase`
+- `idea.proposed`, `idea.completed`, `idea.pruned`, `idea.merged`
+- `executor.start`, `executor.end`
+- `tool.start`, `tool.end`
+- `llm.call`, `llm.error`, `llm.cache_stat`
+- `user.await`, `user.input_received`
+- `progress.heartbeat`
+
+Events are JSON-serializable and secret-free. The dashboard, WebUI, stats
+collector, and reports consume them.
+
+## Shutdown
+
+Before final report:
+
+1. Wait for background SearchAgents to flush if any are pending.
+2. Write final checkpoint and messages.
+3. Run plugin `on_finalize` hook if present.
+4. On emergency timeout, recover best submission:
+   - keep trunk `submission.csv` if present;
+   - otherwise copy the best scored snapshot from `submissions/`;
+   - otherwise copy the most recent snapshot.
+5. Write `run_stats.json`.
+6. Generate `REPORT.md`.
+
+In smoke/forward tests, finalization is still mandatory even when no real
+executor, merge, or B_test ran. Generate `REPORT.md`, make the smoke caveat
+explicit, and stop after artifact validation.
+
+After `REPORT.md` is written and expected artifacts validate, do not keep
+polishing reports or launching extra checks. Return a concise final response
+with paths, scores, and caveats.
+
+## REPORT.md Contents
+
+Include:
+
+- instruction/task;
+- exit reason;
+- model/provider if known;
+- event summary;
+- run stats and token scope;
+- baseline/final B_dev;
+- baseline/final B_test when available;
+- merged ideas;
+- top ideas by score;
+- artifact paths.
+
+Reports must tolerate partial data. Missing stats, events, or tree fields
+should produce a partial report, not a crash.
+
+## Manual Report Generation
+
+Native:
+
+```bash
+arbor report <project>/.arbor/sessions/<run_name>
+```
+
+Skill-only:
+
+```bash
+python <tools>/arbor_state.py report --cwd <project> --run-name <run_name>
+```
+
+For skill-suite smoke tests, run `python <tools>/arbor_state.py check` before
+`report` for tree integrity, then run it again after `report` with artifact
+flags:
+
+```bash
+python <tools>/arbor_state.py check --cwd <project> --run-name <run_name>
+python <tools>/arbor_state.py report --cwd <project> --run-name <run_name>
+python <tools>/arbor_state.py check --cwd <project> --run-name <run_name> \
+  --require-report --require-experiment --require-executor-prompt
+```
+
+Use `--strict-artifacts` only for full sessions that are expected to contain
+events and run stats in addition to tree, experiment, prompt, and report
+artifacts.
+
+## Final Response To User
+
+Summarize durable evidence, not transient thoughts:
+
+- session directory;
+- final dev/test scores;
+- best/merged node ids;
+- report path;
+- important caveats such as no B_test, timeout, failed search, or incomplete
+  executor run.
+
+codex
+The contract is already explicit: existing session, one cycle, real iteration on `B_dev`, no interactive prompts, no package installs, and protected eval/test assets. I’m loading the phase instructions needed for resume, selection, execution, and merge discipline.
+exec
+/usr/bin/zsh -lc "sed -n '1,320p' /home/ghost/.codex/skills/arbor-agent-coordinator/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-agent-coordinator
+description: "Coordinator phase for Arbor: persistent ReAct loop, Idea Tree state, INIT/OBSERVE/IDEATE/SELECT/DISPATCH/DECIDE protocol, tool mapping, cycle caps, and coordinator-only behavior. Use after setup/intake and before phase-specific ideation, executor, merge, search, or report skills."
+---
+
+# Arbor Coordinator
+
+Use this to run the strategic loop. The coordinator is a research commander,
+not the code author.
+
+## Coordinator Role
+
+- Do not edit benchmark code directly.
+- Maintain the Idea Tree as durable memory.
+- Dispatch executors to implement leaf ideas.
+- Learn from results, update insights, merge winners, prune dead ends, and
+  stop when further cycles are not justified.
+- Treat user dashboard notes as operator input, not benchmark evidence.
+
+## Arbor Cycle
+
+### Step 0: INIT
+
+Run once at the start unless resuming.
+
+1. Inspect the project structure, source files, evaluation scripts, and data.
+2. Identify B_dev and B_test.
+3. Run or locate the unmodified baseline on B_dev.
+4. Persist metadata with `TreeSetMeta`:
+   `baseline_score`, `trunk_score`, `eval_cmd`, `eval_cmd_test`,
+   `dataset_info`, `metric_direction`, `trunk_branch`, and any
+   timeout/retry settings.
+5. If a plugin supplies an `eval_contract`, prefill the matching metadata.
+
+If resuming, skip INIT and call `TreeView` to re-orient.
+
+If the run is smoke-only, do not run expensive baselines or inherited real
+eval commands. Persist a cheap cached-score parser or explicitly mocked score
+as the eval command, set short timeout metadata, and mark `dataset_info` and
+node reports as smoke-only.
+
+### Step 1: OBSERVE
+
+Read code, logs, prior experiment reports, tree insights, failure cases, and
+score patterns. Focus on failure classes and bottlenecks, not just symptoms.
+For large logs, use `arbor_state.py parse-log` or normalize carriage returns
+before matching metric lines. Do not flood context with full training logs
+during smoke or forward tests.
+
+### Step 2: IDEATE
+
+1. Call `TreeView(format="constraints")` first.
+2. If strict skills are enabled, immediately load `arbor-agent-ideate`.
+3. Add only ideas that pass the ideation gate.
+
+Depth semantics:
+
+- Depth 0: root objective and global insight.
+- Depth 1: broad strategy categories.
+- Depth 2+: concrete implementable approaches.
+
+### Step 3: SELECT
+
+Choose pending leaves using evidence, expected impact, feasibility, diversity,
+and recoverable failure modes. Use `TreeView(format="pending")` or compact view.
+
+### Step 4: DISPATCH And UPDATE
+
+Load `arbor-agent-executor` and dispatch:
+
+- One idea: `RunExecutor(node_id, additional_context=...)`.
+- Independent ideas: `RunExecutorParallel(tasks=[...])`, usually 2-4 tasks.
+
+Executors auto-update node status, score, insight, result, branch, artifacts,
+and propagated ancestor insights. If extraction is wrong, correct it with
+`TreeUpdateNode`.
+
+Scores in the tree are absolute B_dev metric values, not deltas.
+
+### Step 5: DECIDE
+
+Use `arbor-agent-merge-eval` for merge decisions.
+
+- Continue: more promising directions exist.
+- Merge: B_dev beats trunk enough and B_test verification passes.
+- Prune: repeated failures with no credible recovery path.
+- Stop: cap/budget reached, diminishing returns, or no pending ideas.
+
+Before stopping, run final B_test only if it is available, the contract permits
+it, and the run is not smoke-only. Record `test_trunk_score` when the final
+test run is valid.
+
+## Idea Tree Schema
+
+Node statuses are:
+
+- `pending`
+- `running`
+- `done`
+- `merged`
+- `pruned`
+
+Each node stores:
+
+- `id`, `parent_id`, `children_ids`, `depth`
+- `hypothesis`
+- `status`
+- `insight`
+- `result`
+- `score`
+- `code_ref`
+- `related_work`
+
+Tree metadata stores:
+
+- `baseline_score`, `trunk_score`
+- `test_baseline_score`, `test_trunk_score`
+- `eval_cmd`, `eval_cmd_test`
+- `eval_timeout`, `eval_retries`, retry backoff
+- `dataset_info`
+- `metric_direction`
+- `trunk_branch`
+- `submission_path`, `sample_submission_path`
+
+## Tool Mapping
+
+Native Arbor tools:
+
+- `TreeView`: compact/full/node/pending/constraints.
+- `TreeAddNode`: add child with generated id.
+- `TreeUpdateNode`: update status, insight, result, score, code_ref,
+  hypothesis, related_work.
+- `TreeSetMeta`: persist evaluation metadata.
+- `TreePrune`: mark a subtree pruned.
+- `TreePropagate`: synthesize child insights upward.
+- `RunExecutor`, `RunExecutorParallel`: run implementation agents.
+- `GitMergeBranch`: B_test verify and merge.
+- `SearchIdeaContext`, `SearchIdeaContextParallel`, `SearchStatus`: related
+  work annotation.
+
+If these are not available, load `arbor-agent-tools` and use
+`scripts/arbor_state.py` as the state backend.
+
+When using the fallback helper, serialize tree-mutating commands for the same
+run. Do not launch `meta`, `add`, `update`, `prune`, `propagate`, `eval`,
+`record`, `worktree`, or `merge` in parallel.
+
+## Cycle Caps
+
+Count cycles once a node is done, merged, pruned, or failed. If the hard cap is
+reached, do not launch more executors. Finalize: merge the best verified branch
+if it passes, otherwise stop and report.
+
+## AskUser And Live Notes
+
+Use human questions only when genuinely blocked on information that cannot be
+discovered locally. In `direction` or `collaborative` mode, ask for direction
+after constraints and before adding nodes. In `review` modes, respect skipped
+or edited ideas and executor gates.
+
+exec
+/usr/bin/zsh -lc "sed -n '1,280p' /home/ghost/.codex/skills/arbor-agent-setup-intake/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-agent-setup-intake
+description: "Setup, intake, preflight, and launch-contract phase for open-source Arbor runs. Use when confirming a target project, metric, baseline, dev/test split, config/plugin settings, branch guard, session directory, or when translating a user goal into the precise contract consumed by the coordinator."
+---
+
+# Arbor Setup And Intake
+
+Use this before the coordinator starts. The output is a concrete research
+contract plus a clean workspace/session ready for the Arbor cycle.
+
+## Fast Path
+
+1. Confirm the target project directory. Treat the launch cwd as the default
+   unless evidence says it is wrong.
+2. Inspect README/config/eval files yourself. Do not ask the user to recite
+   data you can read.
+3. Identify the primary metric, direction, and real evaluation command.
+4. Determine B_dev and B_test. If only one split exists, call it B_dev and
+   record that no separate B_test is available.
+5. Run or locate a cheap baseline when feasible. If not feasible, state
+   `baseline unknown - measure during INIT`.
+6. Propose one complete contract and ask for a single yes/edit confirmation.
+7. Initialize or select `.arbor/sessions/<run_name>/` and hand the contract
+   to the coordinator.
+8. If real merges are allowed, define a non-protected `trunk_branch` such as
+   `arbor/trunk/<run_name>`. Treat `main`/`master` as the base branch, not the
+   merge target.
+
+For smoke/forward tests, never run expensive setup, data prep, training, GPU
+jobs, or the discovered full eval command. Locate an existing score in cached
+metadata/logs or use a clearly labelled mocked score, and include
+`smoke-only` in the contract.
+
+## Research Contract
+
+The instruction passed to the coordinator must contain all five components:
+
+- **Metric**: exact score name, command that prints it, and maximize/minimize.
+- **Baseline anchor**: current value if known, otherwise say it will be
+  measured in INIT.
+- **Ambition**: beat baseline, reach a target, or push as high as possible
+  within the cycle budget.
+- **Scope preference**: novelty-leaning, effect-leaning, or mixed. Infer it
+  from the repo/task when possible.
+- **Hard constraints**: at minimum, B_test is not for iteration, data/eval
+  harness must not be modified to game the metric, and project-specific
+  protected paths must be respected.
+
+Do not prescribe a specific approach in the contract. The coordinator owns
+idea generation.
+
+## Preflight Checks
+
+Mirror `arbor run` preflight:
+
+- LLM credentials or provider config exist if using the real CLI.
+- `cwd` exists and is non-empty.
+- `git` exists. A git repo should be clean before a fresh run.
+- An eval entry point exists or can be discovered (`eval.sh`, `run_eval.py`,
+  `evaluate.py`, README instructions, Makefile targets, etc.).
+- If the repo is on a non-base branch, either switch to the base branch or
+  explicitly allow starting from that branch.
+
+For skill-only smoke tests, do not require external API credentials unless an
+LLM call will actually be made.
+
+## Session Layout
+
+Use the open-source layout:
+
+```text
+<project>/.arbor/sessions/<run_name>/
+  REPORT.md
+  COORDINATOR_FINAL_REPORT.txt
+  events.jsonl
+  run_stats.json
+  conversation.md
+  .coordinator/
+    idea_tree.json
+    idea_tree.md
+    checkpoint.json
+    messages.jsonl
+    baseline_cache.json
+  experiments/<node_id>/
+    report.md
+    metrics.json
+    diff.patch
+  submissions/
+```
+
+When no native Arbor runtime exists, initialize the same layout with:
+
+```bash
+TOOLS="<skill-dir>/arbor-agent-tools/scripts/arbor_state.py"
+python "$TOOLS" init \
+  --cwd <project> --run-name <run_name> --task "<contract>"
+```
+
+## Config And Plugins
+
+Honor this precedence:
+
+```text
+pydantic defaults < plugin.config_overrides < profile < project YAML < CLI
+```
+
+Recognize auto config names in the target project:
+
+- `research_config.yaml`
+- `arbor.yaml`
+- `autoresearch.yaml`
+
+If `plugin: mle_kaggle` is selected, load
+`arbor-agent-plugins-hitl-budget` before INIT because the plugin pre-fills
+eval contract, protected paths, required outputs, time budget, and skill
+behavior.
+
+## Baseline Metadata
+
+The setup phase can discover metadata, but the coordinator must persist it:
+
+- `baseline_score`
+- `trunk_score`
+- `test_baseline_score`
+- `test_trunk_score`
+- `eval_cmd`
+- `eval_cmd_test`
+- `eval_timeout`
+- `eval_retries`
+- `dataset_info`
+- `metric_direction`
+- `trunk_branch`
+- `submission_path`
+- `sample_submission_path`
+
+Use command templates:
+
+```text
+cd {cwd} && <eval command> --run-name {node_id}
+```
+
+Never bake the main checkout path into executor commands.
+
+When using `arbor_state.py meta`, quote any `--set` value that contains
+spaces, braces, shell metacharacters, or JSON:
+
+```bash
+python "$TOOLS" meta --cwd <project> --run-name <run_name> \
+  --set "eval_cmd=cd {cwd} && python eval.py --split dev" \
+  --set "trunk_branch=arbor/trunk/<run_name>"
+```
+
+In smoke mode, if a cached baseline log exists, parse only metric lines with
+`arbor_state.py parse-log` or an equivalent parser that normalizes carriage
+returns. Do not `cat`, raw `rg`, raw `grep`, or `tail` long training logs; if
+debugging requires context, cap output to 20 lines.
+
+## Launch Commands
+
+Native runtime examples:
+
+```bash
+arbor setup
+arbor doctor
+arbor run "<contract>" --yes --yes-cwd <project> --config <config> --max-cycles 3
+arbor report <project>/.arbor/sessions/<run_name>
+```
+
+Skill-only smoke tests should use `arbor-agent-tools` and a copied project
+directory unless the user explicitly wants to modify the live repo.
+
+exec
+/usr/bin/zsh -lc "sed -n '1,320p' /home/ghost/.codex/skills/arbor-agent-tools/SKILL.md" in /home/ghost/projects/aegis-router
+ succeeded in 0ms:
+---
+name: arbor-agent-tools
+description: "Deterministic helper layer for emulating Arbor tools in Codex or Claude Code when native TreeView, TreeAddNode, TreeSetMeta, RunExecutor, GitMergeBranch, or report tooling is unavailable. Use for local state management, eval score capture, executor prompt generation, merge checks, and skill forward tests."
+---
+
+# Arbor Agent Tools
+
+Use this skill when the host does not provide native Arbor tools. The bundled
+script stores state in the same style as open-source Arbor:
+
+```text
+<cwd>/.arbor/sessions/<run_name>/.coordinator/idea_tree.json
+<cwd>/.arbor/sessions/<run_name>/.coordinator/idea_tree.md
+```
+
+## Script
+
+`scripts/arbor_state.py` is stdlib-only.
+
+Common commands:
+
+```bash
+TOOLS="<skill-dir>/arbor-agent-tools/scripts/arbor_state.py"
+python "$TOOLS" init --cwd <project> --run-name <run> --task "<contract>"
+python "$TOOLS" view --cwd <project> --run-name <run> --format constraints
+python "$TOOLS" meta --cwd <project> --run-name <run> --set baseline_score=42 --set trunk_score=42
+python "$TOOLS" meta --cwd <project> --run-name <run> --set "eval_cmd=cd {cwd} && bash eval.sh"
+python "$TOOLS" add --cwd <project> --run-name <run> --parent-id ROOT --hypothesis "<four-line hypothesis>"
+python "$TOOLS" update --cwd <project> --run-name <run> --node-id 1 --status done --score 45 --insight "..."
+python "$TOOLS" worktree --cwd <project> --run-name <run> --node-id 1 --trunk <trunk_branch>
+python "$TOOLS" prompt-executor --cwd <project> --run-name <run> --node-id 1 --workdir <worktree>
+python "$TOOLS" prompt-executor --cwd <project> --run-name <run> --node-id 1 --smoke
+python "$TOOLS" eval --cwd <project> --run-name <run> --split dev --exec-cwd <worktree> --cmd "bash {cwd}/eval.sh" --set-meta trunk
+python "$TOOLS" record --cwd <project> --run-name <run> --node-id 1 --score 45 --insight "..." --result "..."
+python "$TOOLS" parse-log --log <project>/run.log --metric val_bpb
+python "$TOOLS" report --cwd <project> --run-name <run>
+python "$TOOLS" check --cwd <project> --run-name <run> --require-report --require-experiment --require-executor-prompt
+```
+
+Read `references/tool-mapping.md` when deciding which script command maps to a
+native Arbor tool.
+
+## State Rules
+
+- Keep scores absolute.
+- Keep eval commands templated with `{cwd}` and `{node_id}`.
+- Do not run B_test during executor iteration.
+- Use `record` for executor outcomes so artifacts and tree updates stay in
+  one place.
+- Use `check` before trusting a hand-edited tree. Add artifact flags such as
+  `--require-report`, `--require-experiment`, `--require-executor-prompt`,
+  `--require-events`, `--require-run-stats`, or `--strict-artifacts` when
+  validating a completed run.
+- Serialize tree-mutating commands for the same run. Do not parallelize
+  `init`, `meta`, `add`, `update`, `prune`, `propagate`, `eval`, `record`,
+  `worktree`, or `merge`.
+
+## Forward Testing
+
+For a smoke test, copy the target project to a disposable directory outside the
+Arbor repository, initialize a short run, record metadata, add one idea,
+generate an executor prompt, and run only cheap commands. Do not run full long
+training unless explicitly requested.
+
+Smoke-specific rules:
+
+- Use `prompt-executor --smoke`.
+- If a real eval command invokes training, data prep, downloads, GPU work, or a
+  minute-scale benchmark, do not execute it; store a cached-score parser,
+  harmless echo, or mocked score instead.
+- Parse existing logs with `parse-log`; it normalizes carriage-return progress
+  logs before extracting metrics. Avoid full `cat`, raw `rg`, raw `grep`, or
+  `tail` output; cap diagnostic log snippets at 20 lines.
+- Finish with `check` and `report` so the smoke produces a real `REPORT.md`.
+
+codex
+I’ve got the run-control rules. Next I’m checking the repository and session artifacts so stale `running` nodes can be reconciled against real reports before picking any new work.

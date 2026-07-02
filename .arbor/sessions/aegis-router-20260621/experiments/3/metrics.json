@@ -1,0 +1,8 @@
+{
+  "node_id": "3",
+  "hypothesis": "Mechanism: Pheromone-repulsion memory with fast decay\nHypothesis: reinforce successful edges like ant pheromones, but decay them quickly after delayed drops or Sybil hits and add a local repulsion field around recently bad nodes so the router avoids deceptive hubs under churn.\nObservable: lower average hops and latency, fewer loops, and stable delivery on sparse graphs.\nConflicts: none - attacks path memory and exploration policy rather than the benchmark.",
+  "score": 0.6874925765035899,
+  "insight": "Une faible mémoire positive d'arêtes avec répulsion courte améliore légèrement B_dev, mais le gain ne généralise pas au held-out; la rétroaction limitée au dernier saut réduit probablement la qualité du crédit causal.",
+  "result": "B_dev 0.687493 > trunk 0.684530, mais B_test 0.422692 < trunk 0.424291; candidat rejeté sans fusion.",
+  "branch": null
+}

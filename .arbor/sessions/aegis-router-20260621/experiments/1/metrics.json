@@ -1,0 +1,8 @@
+{
+  "node_id": "1",
+  "hypothesis": "Mechanism: CVaR tail-risk scorer over fixed scenario windows\nHypothesis: optimize the lower tail of delivery and the upper tail of Sybil exposure across the fixed dev scenarios so the router stops overfitting lucky seeds and improves worst-case robustness without changing the benchmark or metric formulas.\nObservable: higher dev robust_score, lower max_sybil, and smaller score variance across seeds.\nConflicts: none - attacks the objective aggregation axis rather than local link tuning.",
+  "score": 0.6959375149744956,
+  "insight": "La sélection CVaR sur dev trouve un profil performant localement, mais son score held-out chute fortement; les cinq scénarios dev ne couvrent pas assez le régime Sybil à 15%.",
+  "result": "B_dev 0.695938 > trunk 0.684530, mais B_test 0.340566 < trunk 0.424291; profil rejeté et non promu.",
+  "branch": null
+}

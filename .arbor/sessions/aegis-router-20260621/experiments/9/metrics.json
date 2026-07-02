@@ -1,0 +1,8 @@
+{
+  "node_id": "9",
+  "hypothesis": "Mechanism: Cause-specific feedback router with competing delivery and adversary evidence channels\nHypothesis: Separate congestion, link-loss, loop, and observed-Sybil evidence before updating edge preferences, because the shared badness signal currently confuses recoverable congestion with adversarial risk and suppresses useful delivery routes.\nObservable: B_dev robust_score and delivery improve together, with fewer repeated Sybil touches and no regression in congested low-Sybil scenarios.\nConflicts: pruned [5] said uniform path credit assigns terminal signals too broadly; this counters by factorizing feedback by observable failure cause before any routing penalty is applied.",
+  "score": 0.666964541596115,
+  "insight": "Cause-specific bounded reranking on the exact v3 profile reduced mean/max Sybil exposure to 0.119608/0.138731, but delivery fell to 0.596254; factorized penalties still over-suppress useful routes unless confidence or context can distinguish causal adversary evidence.",
+  "result": "B_dev 0.666964541596115, below validated trunk 0.6845301005442892; B_test not run.",
+  "branch": "/tmp/aegis-arbor-node9-cycle9-20260622"
+}

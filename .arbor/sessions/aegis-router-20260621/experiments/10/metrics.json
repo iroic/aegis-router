@@ -1,0 +1,11 @@
+{
+  "node_id": "10",
+  "hypothesis": "Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage\nHypothesis: Shrink sparse edge failure evidence toward a neutral prior and apply learned penalties only as posterior confidence grows, so stochastic early drops cannot permanently suppress delivery-capable routes while repeated adversarial outcomes still accumulate decisive evidence.\nObservable: B_dev robust_score exceeds 0.684530 with delivery preserved near trunk and mean/max Sybil exposure no worse than trunk across the fixed five-scenario suite.\nConflicts: pruned [8] found hard filtering has a narrow operating range and pruned [9] found factorized penalties over-suppress useful routes; this counters by changing evidence calibration and confidence rather than adding stronger penalties or deleting actions.",
+  "score": 0.6933176702330417,
+  "insight": "Confidence-gating sparse directional evidence improved B_dev, delivery, Sybil exposure, latency, and hops, but the gain did not transfer to the held-out high-Sybil scenario; the tiny pooled prior remains sensitive to distribution shift.",
+  "result": "B_dev 0.6933176702330417 exceeded trunk 0.6845301005442892, but the single authorized B_test merge verification scored 0.4151347276777513 below trunk 0.42429066273896465; rejected without merge.",
+  "test_score": 0.4151347276777513,
+  "test_trunk_score": 0.42429066273896465,
+  "decision": "pruned",
+  "branch": "dd7c7f7a5f98877810bc79ca9448cb5e32ecf2ea at /tmp/aegis-arbor-node10-cycle10-20260622"
+}

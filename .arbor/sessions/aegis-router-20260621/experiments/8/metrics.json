@@ -1,0 +1,8 @@
+{
+  "node_id": "8",
+  "hypothesis": "Mechanism: Viability-shielded routing with a control-barrier action filter\nHypothesis: Filter high-risk neighbors only when at least one locally viable alternative preserves destination progress, queue headroom, and bounded projected loss, so security pressure cannot remove the last delivery-capable action as unconditional penalties did.\nObservable: B_dev robust_score exceeds 0.684530 while delivery stays near trunk and max Sybil exposure falls without materially increasing hops or latency.\nConflicts: pruned [7] said unconditional concentration penalties over-diversify and pruned [6] said coarse risk penalties reduce delivery; this counters via a per-decision viability shield that leaves baseline ranking unchanged when no safe alternative exists.",
+  "score": 0.6828301562815761,
+  "insight": "A local viability proof prevents catastrophic over-filtering, but hard edge deletion has a narrow operating range: conservative gating nearly matches trunk without exceeding it, while broader gating collapses delivery.",
+  "result": "Implemented and validated an optional directional viability shield in an isolated executor copy; B_dev scored 0.6828301562815761, below trunk by 0.001699944262713137. B_test was not run.",
+  "branch": null
+}

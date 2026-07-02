@@ -1,0 +1,21 @@
+[Unit]
+Description=Aegis Router autonomous Arbor research loop
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ghost/projects/aegis-router
+ExecStart=/home/ghost/projects/aegis-router/scripts/arbor_daemon.sh
+Restart=on-failure
+RestartSec=60
+TimeoutStopSec=90
+KillMode=mixed
+Environment=HOME=/home/ghost
+Environment=PATH=/home/ghost/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+Environment=AEGIS_ARBOR_INTERVAL_SECONDS=300
+Environment=AEGIS_ARBOR_ERROR_BACKOFF_SECONDS=1800
+Environment=AEGIS_ARBOR_MAX_CYCLE_SECONDS=14400
+
+[Install]
+WantedBy=default.target

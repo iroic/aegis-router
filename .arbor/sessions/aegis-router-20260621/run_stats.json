@@ -1,0 +1,18 @@
+{
+  "run_name": "aegis-router-20260621",
+  "cycles_completed_total": 13,
+  "cycles_completed_this_resume": 1,
+  "nodes_total": 14,
+  "nodes_merged": 0,
+  "nodes_pruned": 13,
+  "nodes_pending": 0,
+  "baseline_b_dev": 0.6355613879111393,
+  "trunk_b_dev": 0.6845301005442892,
+  "baseline_b_test": 0.2999592574075973,
+  "trunk_b_test": 0.42429066273896465,
+  "last_node": "13",
+  "last_decision": "pruned",
+  "last_candidate_b_dev": 0.6931173548326843,
+  "last_candidate_b_test": 0.42070455354319664,
+  "exit_reason": "One complete coordinator cycle finished; node 13 rejected after held-out verification; pacing delegated to external supervisor."
+}

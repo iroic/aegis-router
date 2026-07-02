@@ -1,0 +1,8 @@
+{
+  "node_id": "11",
+  "hypothesis": "Mechanism: Sibling-relative posterior evidence with local competitive shrinkage\nHypothesis: Calibrate each directional edge against the observed evidence distribution of its currently available sibling routes, so broad regime-wide failure pressure cancels out while locally exceptional adversarial edges still receive a bounded penalty.\nObservable: B_dev robust_score exceeds 0.684530 while preserving delivery and reducing mean/max Sybil exposure; gains should arise without absolute global priors or action deletion.\nConflicts: pruned [10] showed fixed global empirical priors fail under distribution shift and pruned [6] showed coarse context statistics reduce delivery; this counters via decision-local relative evidence over concrete alternatives.",
+  "score": 0.6732324563179362,
+  "insight": "Decision-local posterior centering slightly reduced mean Sybil exposure but regressed delivery and increased max Sybil exposure; pure relative evidence discards useful absolute safety information when sibling routes share correlated risk or uneven observation coverage.",
+  "result": "B_dev 0.6732324563179362, below validated trunk 0.6845301005442892; B_test not run; candidate retained on isolated experiment branch only.",
+  "branch": "e803b1d99a80393018ad98f6924c9b730ebfdb77 at /tmp/aegis-arbor-node11-cycle11-20260622"
+}
