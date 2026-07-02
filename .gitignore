@@ -11,3 +11,7 @@ aegis_state.json
 runs/
 .arbor/
 eval_state.json
+.autoresearch/
+.coordinator/
+results/
+cache_old_*/
