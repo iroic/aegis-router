@@ -22,3 +22,4 @@
 {"event":"idea.pruned","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","reason":"B_dev below validated trunk; B_test not run.","timestamp":"2026-06-22T19:33:00+02:00"}
 {"event":"cycle.end","run_name":"aegis-router-20260621","cycle":9,"node_id":"9","decision":"prune","timestamp":"2026-06-22T19:33:30+02:00"}
 {"event":"session.checkpoint","run_name":"aegis-router-20260621","cycle":9,"phase":"cycle_end","timestamp":"2026-06-22T19:33:51+02:00"}
+{"ts": 1783022529.9591904, "type": "session.start", "data": {"task": "(no task recorded)", "cwd": "/home/ghost/projects/aegis-router", "provider": "openai-chat", "model": "deepseek/deepseek-r1-0528"}}

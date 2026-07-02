@@ -1,37 +1,60 @@
-# Research Report: Optimize Aegis Router routing logic for adversarial dynamic networks. Maximize delivery, minimize...
+# Research Report: (no task recorded)
+
+_Generated 2026-07-02 22:02_   _Exit: `error`_
+
+## Instruction
+
+> (no task recorded)
+
+## Event Summary
+
+| Metric | Value |
+|--------|-------|
+| Cycles completed | 0 |
+| Ideas proposed | 0 |
+| Ideas completed | 0 |
+| Ideas pruned | 0 |
+| Ideas merged | 0 |
+| Sub-agent runs | 0 |
+| LLM errors | 0 |
+| Eval failures | 0 |
+
+## Run Stats
+
+| Metric | Value |
+|--------|-------|
+| Total LLM calls | — |
+| Total agents spawned | — |
+| Total input tokens | — |
+| Total output tokens | — |
+| Coordinator turns | — |
 
 ## Results
 
-- B_dev baseline: `0.6356`
-- B_dev final trunk: `0.6845`
-- B_test baseline: `0.3`
-- B_test final trunk: `0.4243`
+**Baseline → Final**: `0.6356` → `0.6845` (+7.70%)
+
+**Test set**: baseline=`0.2999592574075973` final=`0.42429066273896465`
 
 ## Exploration
 
-- Nodes total: `13`
-- Scored nodes: `12`
-- Merged nodes: `0`
+_15 nodes total, 12 scored, 0 merged_
 
-### Top Ideas By Score
+### Top Ideas by Score
 
-- **1** `0.6959` _pruned_: Mechanism: CVaR tail-risk scorer over fixed scenario windows Hypothesis: optimize the lower tail of delivery and the ...
-- **10** `0.6933` _pruned_: Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage Hypothesis: Shrink sparse edge fa...
-- **13** `0.6931` _pruned_: Mechanism: Surprise-gated adverse edge feedback with delivery-preserving relief Hypothesis: Penalize directional edge...
-- **3** `0.6875` _pruned_: Mechanism: Pheromone-repulsion memory with fast decay Hypothesis: reinforce successful edges like ant pheromones, but...
-- **7** `0.687` _pruned_: Mechanism: Concentration-aware route diversification with local structural suspicion Hypothesis: penalize repeated de...
-- **8** `0.6828` _pruned_: Mechanism: Viability-shielded routing with a control-barrier action filter Hypothesis: Filter high-risk neighbors onl...
-- **5** `0.6816` _pruned_: Mechanism: Path-level eligibility traces for delayed routing feedback Hypothesis: distribute terminal delivery, drop,...
-- **6** `0.6744` _pruned_: Mechanism: Adversarial domain-randomized learning curriculum Hypothesis: train persistent edge memory across procedur...
-- **11** `0.6732` _pruned_: Mechanism: Sibling-relative posterior evidence with local competitive shrinkage Hypothesis: Calibrate each directiona...
-- **12** `0.6719` _pruned_: Mechanism: Local bridge-risk prior from neighbor topology before feedback learning Hypothesis: Penalizing candidate n...
-
-## Global Insight
-
-Children findings: [1, pruned, score=0.6959] La sélection CVaR sur dev trouve un profil performant localement, mais son score held-out chute fortement; les cinq scénarios dev ne couvrent pas assez le régime Sybil à 15%. [Pruned: Surapprentissage dev: B_test 0.340566 très inférieur au trunk validé 0.424291.] | [2, pruned] [Pruned: Regression on the fixed dev/test benchmark: robust score dropped from 0.6356 to 0.5855 on dev and from 0.3000 to 0.2866 on test, so the latent-hazard formulation is not a net win in its current form.] | [3, pruned, score=0.6875] Une faible mémoire positive d'arêtes avec répulsion courte améliore légèrement B_dev, mais le gain ne généralise pas au held-out; la rétroaction limitée au dernier saut réduit probablement la qualité du crédit causal. [Pruned: Le gain dev ne se généralise pas: B_test 0.422692 inférieur au trunk 0.424291.] | [4, pruned, score=0.667] Le sélecteur contextuel à deux profils améliore le baseline mais ne dépasse pas le profil sécurité fixe; le coût d'apprentissage et les commutations n'apportent pas de gain robuste sur ce dev fixe. [Pruned: Dev score 0.666974 inférieur au trunk 0.684530; pas de justification pour exposer B_test ou fus...
+- **1** `0.6959` _pruned_: Mechanism: CVaR tail-risk scorer over fixed scenario windows
+- **10** `0.6933` _pruned_: Mechanism: Empirical-Bayes confidence-gated edge evidence with reversible shrinkage
+- **13** `0.6931` _pruned_: Mechanism: Surprise-gated adverse edge feedback with delivery-preserving relief
+- **3** `0.6875` _pruned_: Mechanism: Pheromone-repulsion memory with fast decay
+- **7** `0.6870` _pruned_: Mechanism: Concentration-aware route diversification with local structural suspicion
+- **8** `0.6828` _pruned_: Mechanism: Viability-shielded routing with a control-barrier action filter
+- **5** `0.6816` _pruned_: Mechanism: Path-level eligibility traces for delayed routing feedback
+- **6** `0.6744` _pruned_: Mechanism: Adversarial domain-randomized learning curriculum
+- **11** `0.6732` _pruned_: Mechanism: Sibling-relative posterior evidence with local competitive shrinkage
+- **12** `0.6719` _pruned_: Mechanism: Local bridge-risk prior from neighbor topology before feedback learning
 
 ## Artifacts
 
-- Idea tree JSON: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.json`
-- Idea tree Markdown: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.md`
-- Experiments: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/experiments`
+- Idea tree (JSON): `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.json`
+- Idea tree (Markdown): `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/.coordinator/idea_tree.md`
+- Run stats: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/run_stats.json`
+- Event log: `/home/ghost/projects/aegis-router/.arbor/sessions/aegis-router-20260621/events.jsonl`
