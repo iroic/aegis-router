@@ -1,7 +1,14 @@
 import unittest
 
 from aegis_router.packet import Packet
-from aegis_router.postquantum_crypto import PostQuantumIdentity, sign_packet, verify_packet, kyber768_roundtrip
+from aegis_router.postquantum_crypto import (
+    PostQuantumIdentity,
+    kyber768_roundtrip,
+    sign_packet,
+    sign_receipt,
+    verify_packet,
+    verify_receipt,
+)
 
 
 class PostQuantumCryptoTests(unittest.TestCase):
@@ -30,6 +37,24 @@ class PostQuantumCryptoTests(unittest.TestCase):
         packet.touched_sybil = True
 
         self.assertTrue(verify_packet(packet, identity.signing_public_key))
+
+    def test_delivery_receipt_verifies_only_with_destinations_key(self):
+        dst = PostQuantumIdentity.generate()
+        sig = sign_receipt(42, 1, 7, 123.0, dst.signing_secret_key)
+        self.assertTrue(verify_receipt(42, 1, 7, 123.0, sig, dst.signing_public_key))
+
+        # A sybil trying to forge a receipt for a packet it dropped would need
+        # dst's secret key -- its own key does not verify.
+        sybil = PostQuantumIdentity.generate()
+        self.assertFalse(verify_receipt(42, 1, 7, 123.0, sig, sybil.signing_public_key))
+
+    def test_delivery_receipt_is_bound_to_its_exact_packet(self):
+        dst = PostQuantumIdentity.generate()
+        sig = sign_receipt(42, 1, 7, 123.0, dst.signing_secret_key)
+        # A valid receipt for one packet cannot be replayed for another
+        # (different packet_id / created_at) even by the legitimate dst.
+        self.assertFalse(verify_receipt(43, 1, 7, 123.0, sig, dst.signing_public_key))
+        self.assertFalse(verify_receipt(42, 1, 7, 999.0, sig, dst.signing_public_key))
 
     def test_ml_kem_768_shared_secret_roundtrip(self):
         identity = PostQuantumIdentity.generate()

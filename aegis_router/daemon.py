@@ -26,7 +26,7 @@ from statistics import mean
 
 from .graph import LinkMetrics, NodeId, P2PGraph, generate_random_graph
 from .packet import Packet
-from .postquantum_crypto import PostQuantumIdentity, sign_packet, verify_packet
+from .postquantum_crypto import PostQuantumIdentity, sign_packet, sign_receipt, verify_packet, verify_receipt
 from .solvers import AdaptiveRiskSolver, EdgeLearningSolver, RiskAwareHybridSolver, RoutingSolver, ShortestPathSolver
 
 Registry = dict[NodeId, tuple[str, int]]
@@ -54,6 +54,7 @@ def packet_to_wire(pkt: Packet) -> dict:
         "signature": pkt.signature,
         "last_from": pkt.last_from,
         "last_neighbor": pkt.last_neighbor,
+        "path": list(pkt.path),
     }
 
 
@@ -75,6 +76,7 @@ def packet_from_wire(data: dict) -> Packet:
     pkt.signature = data["signature"]
     pkt.last_from = data["last_from"]
     pkt.last_neighbor = data["last_neighbor"]
+    pkt.path = list(data.get("path", []))
     return pkt
 
 
@@ -94,18 +96,42 @@ class ClusterStats:
     # first copy of every packet is "free" -- it's what non-redundant mode
     # also sends). Bandwidth overhead accounting, parallel to retransmissions.
     redundant_copies: int = 0
+    # Dedup for sybil-touch counting, same idea as _delivered_ids on
+    # LocalNodeProtocol: with redundancy > 1, several independent copies of
+    # the same logical packet_id each get their own record_drop()/
+    # record_delivery() call. Without this, a packet whose copies each
+    # touched a sybil would count multiple times against a `generated`
+    # count that only increments once per logical packet -- inflating
+    # sybil_touch_ratio in a way that has nothing to do with actual
+    # exposure, and making it incomparable between redundancy=1 and >1 runs.
+    _sybil_touched_ids: set[int] = field(default_factory=set, repr=False)
+    # Delivery-receipt accounting (see LocalNodeProtocol receipt machinery):
+    # signed end-to-end confirmations that came back vs forwards whose
+    # receipt never arrived within the timeout (a downstream-failure signal).
+    receipts_confirmed: int = 0
+    receipt_timeouts: int = 0
 
     def record_generated(self) -> None:
         self.generated += 1
 
+    def record_receipt_confirmed(self) -> None:
+        self.receipts_confirmed += 1
+
+    def record_receipt_timeout(self) -> None:
+        self.receipt_timeouts += 1
+
     def record_delivery(self, pkt: Packet) -> None:
         self.delivered.append(pkt)
-        if pkt.touched_sybil:
-            self.sybil_touched += 1
+        self._count_sybil_touch_once(pkt)
 
     def record_drop(self, reason: str, pkt: Packet | None = None) -> None:
         self.dropped[reason] += 1
-        if pkt is not None and pkt.touched_sybil:
+        if pkt is not None:
+            self._count_sybil_touch_once(pkt)
+
+    def _count_sybil_touch_once(self, pkt: Packet) -> None:
+        if pkt.touched_sybil and pkt.packet_id not in self._sybil_touched_ids:
+            self._sybil_touched_ids.add(pkt.packet_id)
             self.sybil_touched += 1
 
     def record_retransmissions(self, n: int) -> None:
@@ -134,6 +160,8 @@ class ClusterStats:
             "retransmissions": self.retransmissions,
             "sybil_touch_ratio": self.sybil_touch_ratio,
             "redundant_copies": self.redundant_copies,
+            "receipts_confirmed": self.receipts_confirmed,
+            "receipt_timeouts": self.receipt_timeouts,
         }
 
 
@@ -155,6 +183,9 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         ttl: int,
         link_retries: int,
         redundancy: int,
+        redundancy_risk_tolerance: float,
+        receipts: bool,
+        receipt_timeout: float,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.node_id = node_id
@@ -169,18 +200,31 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self.ttl = ttl
         self.link_retries = max(0, link_retries)
         self.redundancy = max(1, redundancy)
+        self.redundancy_risk_tolerance = redundancy_risk_tolerance
+        self.receipts = receipts
+        self.receipt_timeout = receipt_timeout
         self.loop = loop
         self.transport: asyncio.DatagramTransport | None = None
         # Dedup for redundant copies of the same packet_id arriving via
         # different paths: only the first arrival counts as delivery.
         self._delivered_ids: set[int] = set()
+        # Receipt mode: an edge's verdict is deferred until the end-to-end
+        # outcome is known. Maps (packet_id, next_hop) forwarded from here to
+        # the loop-time deadline by which a signed receipt must return; a
+        # returning receipt confirms delivery for that edge, an expired entry
+        # is swept as a downstream failure. See _forward / _handle_receipt /
+        # sweep_receipt_timeouts.
+        self._pending_receipts: dict[tuple[int, NodeId], float] = {}
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr) -> None:
-        pkt = packet_from_wire(json.loads(data.decode("utf-8")))
-        self._handle_arrival(pkt)
+        msg = json.loads(data.decode("utf-8"))
+        if msg.get("kind") == "receipt":
+            self._handle_receipt(msg)
+        else:
+            self._handle_arrival(packet_from_wire(msg))
 
     def send_new_packet(self, dst: NodeId, packet_id: int) -> None:
         # Source-only path redundancy: send up to `redundancy` copies of the
@@ -234,11 +278,18 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         """
         pkt.node = self.node_id
         if pkt.node == pkt.dst:
-            if pkt.packet_id in self._delivered_ids:
-                return None  # a redundant copy arrived after the first; not a failure, just discard
             if not verify_packet(pkt, self.pubkeys[pkt.src]):
                 self.stats.record_drop("bad_signature", pkt)
                 return None
+            # Emit a receipt for EVERY arriving copy, not just the first: with
+            # redundancy each successful copy took a distinct path, and every
+            # such path's forwarders deserve their confirmed-delivery credit.
+            # Crediting only the winning copy's path would leave the other
+            # successful paths' nodes to time out into false negatives.
+            if self.receipts:
+                self._emit_receipt(pkt)
+            if pkt.packet_id in self._delivered_ids:
+                return None  # a redundant copy arrived after the first; not counted again
             self._delivered_ids.add(pkt.packet_id)
             pkt.latency = time.monotonic() - pkt.created_at
             self.stats.record_delivery(pkt)
@@ -257,15 +308,46 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
             return None
         pkt.visited.add(pkt.node)
         if extra_exclude:
-            pkt.visited |= extra_exclude
-        nxt = self.solver.next_hop(self.graph, pkt)
-        if extra_exclude:
-            pkt.visited -= extra_exclude
+            nxt = self._risk_aware_diverse_hop(pkt, extra_exclude)
+        else:
+            nxt = self.solver.next_hop(self.graph, pkt)
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
             self.stats.record_drop("no_route", pkt)
             return None
         self._forward(pkt, nxt)
         return nxt
+
+    def _risk_aware_diverse_hop(self, pkt: Packet, exclude: set[NodeId]) -> NodeId | None:
+        """Bias toward a first hop not in `exclude`, but only when doing so
+        doesn't trade security for bandwidth.
+
+        Measured consequence of blind exclusion: in the hardened real-network
+        benchmark, redundancy raised delivery (+13pp) but barely moved
+        sybil-touch (46.8% -> 45.3%, shortest vs edge) even though the same
+        solver halved it (10.2% -> 5.5%) in a lower-sybil-ratio run without
+        redundancy. Forcing a sibling copy away from its natural best choice
+        can push it onto the very neighbor the risk-aware scorer was trying
+        to avoid -- there was no other reason for that neighbor to have
+        scored worse. This compares the natural (unbiased) choice against
+        the diversified one using the solver's own LEARNED peer reputation
+        (never graph.sybil_nodes -- the router has no ground-truth oracle,
+        only behavior it has observed) and only takes the diverse option if
+        it isn't meaningfully riskier.
+        """
+        natural = self.solver.next_hop(self.graph, pkt)
+        if natural is None or natural not in exclude:
+            return natural  # nothing to trade off: already diverse, or no route at all
+        pkt.visited |= exclude
+        diverse = self.solver.next_hop(self.graph, pkt)
+        pkt.visited -= exclude
+        if diverse is None or diverse == natural:
+            return natural  # no alternative exists; reusing the same hop is the only option
+        peer_risk = getattr(self.solver, "peer_risk", None)
+        if peer_risk is None:
+            return diverse  # solver has no reputation signal to protect with (e.g. ShortestPathSolver)
+        if peer_risk[diverse] <= peer_risk[natural] + self.redundancy_risk_tolerance:
+            return diverse  # comparably safe: a genuinely different path is worth it
+        return natural  # diverse alternative is meaningfully riskier; not worth the exposure
 
     def _forward(self, pkt: Packet, nxt: NodeId) -> None:
         # The solver decided on `nxt` from a snapshot of graph.offline_nodes
@@ -297,17 +379,28 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         # just the one attempt everyone always makes.
         transmissions = failed_tries + (1 if success else 0)
         self.stats.record_retransmissions(max(0, transmissions - 1))
-        self._observe_own_link(nxt, success=success)
         # Set before the outcome branch: a packet dropped BY a sybil hop
         # must still count as sybil-touched (a prior bug here only updated
         # this on the success path, undercounting real exposure).
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
         if not success:
+            # An immediate, first-hand failure at this very hop: observe now
+            # in both modes -- there is no downstream to wait on.
+            self._observe_own_link(nxt, success=False)
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
             self.stats.record_drop(reason, pkt)
             return
+        if self.receipts:
+            # Defer the verdict: the frame left the wire fine, but whether the
+            # packet actually reaches dst downstream is exactly what the naive
+            # immediate-positive gets wrong against a sybil further along.
+            # Wait for the signed receipt (or its absence) instead.
+            self._pending_receipts[(pkt.packet_id, nxt)] = self.loop.time() + self.receipt_timeout
+        else:
+            self._observe_own_link(nxt, success=True)
         pkt.last_from = pkt.node
         pkt.last_neighbor = nxt
+        pkt.path.append(self.node_id)
         pkt.hops += 1
         pkt.ttl -= 1
         payload = json.dumps(packet_to_wire(pkt)).encode("utf-8")
@@ -355,6 +448,75 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
             return
         host, port = self.registry[nxt]
         self.transport.sendto(payload, (host, port))
+
+    # ---- delivery receipts --------------------------------------------------
+
+    def _emit_receipt(self, pkt: Packet) -> None:
+        """Destination side: sign proof of delivery and send it to the last
+        forwarder, to travel back along the reverse path."""
+        if not pkt.path:
+            return  # src == dst or never forwarded; nothing to credit
+        signature = sign_receipt(
+            pkt.packet_id, pkt.src, pkt.dst, pkt.created_at, self.identity.signing_secret_key
+        )
+        receipt = {
+            "kind": "receipt",
+            "packet_id": pkt.packet_id,
+            "src": pkt.src,
+            "dst": pkt.dst,
+            "created_at": pkt.created_at,
+            "path": list(pkt.path),
+            "signature": signature,
+        }
+        self._send_receipt(receipt, pkt.path[-1])
+
+    def _handle_receipt(self, r: dict) -> None:
+        """Forwarder side: verify the destination's signature, credit the edge
+        this node used as confirmed-delivered, and relay the receipt one hop
+        further back toward the source."""
+        dst = r["dst"]
+        if not verify_receipt(r["packet_id"], r["src"], dst, r["created_at"], r["signature"], self.pubkeys[dst]):
+            return  # forged or corrupt: a sybil cannot mint these
+        path = r["path"]
+        try:
+            i = path.index(self.node_id)
+        except ValueError:
+            return  # not on this path (stray/duplicate receipt)
+        nxt = path[i + 1] if i + 1 < len(path) else dst
+        if self._pending_receipts.pop((r["packet_id"], nxt), None) is None:
+            return  # already resolved (timed out, or a duplicate receipt)
+        self.stats.record_receipt_confirmed()
+        self._observe_own_link(nxt, success=True)
+        if i > 0:
+            self._send_receipt(r, path[i - 1])
+
+    def _send_receipt(self, receipt: dict, to_node: NodeId) -> None:
+        if self.transport is None or self.transport.is_closing():
+            return
+        # A logically-offline predecessor cannot receive the return frame, so
+        # the reverse path breaks here and upstream nodes time out -- a
+        # realistic return-path-churn imperfection, not a bug.
+        if to_node in self.graph.offline_nodes:
+            return
+        payload = json.dumps(receipt).encode("utf-8")
+        host, port = self.registry[to_node]
+        self.transport.sendto(payload, (host, port))
+
+    def sweep_receipt_timeouts(self, now: float) -> None:
+        """Any forward whose receipt never came back by its deadline is
+        treated as a downstream failure -- the signal a node otherwise
+        completely lacks about what happens beyond its own next hop."""
+        expired = [key for key, deadline in self._pending_receipts.items() if now > deadline]
+        for key in expired:
+            del self._pending_receipts[key]
+            _packet_id, nxt = key
+            self.stats.record_receipt_timeout()
+            self._observe_own_link(nxt, success=False, reason="link_loss")
+
+    def flush_pending_receipts(self) -> None:
+        """At shutdown, resolve every still-pending forward as a timeout so
+        the learned state saved for the next run reflects them."""
+        self.sweep_receipt_timeouts(float("inf"))
 
 
 def _make_solver(name: str, *, seed: int) -> RoutingSolver:
@@ -422,6 +584,9 @@ async def run_local_cluster(
     sybil_extra_drop: float = 0.12,
     link_retries: int = 0,
     redundancy: int = 1,
+    redundancy_risk_tolerance: float = 0.05,
+    receipts: bool = False,
+    receipt_timeout: float = 4.0,
     churn_rate: float = 0.0,
     churn_recovery: float = 0.4,
     congestion_rate: float = 0.0,
@@ -446,7 +611,8 @@ async def run_local_cluster(
         solver = _make_solver(solver_name, seed=seed * 1000 + n)
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
-            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries, redundancy, loop,
+            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries,
+            redundancy, redundancy_risk_tolerance, receipts, receipt_timeout, loop,
         )
         transport, _ = await loop.create_datagram_endpoint(lambda p=protocol: p, local_addr=registry[n])
         protocols[n] = protocol
@@ -461,6 +627,17 @@ async def run_local_cluster(
             rng=random.Random(seed + 500),
         ))
 
+    async def _receipt_sweep_loop() -> None:
+        while True:
+            await asyncio.sleep(max(0.25, receipt_timeout / 4.0))
+            now = loop.time()
+            for protocol in protocols.values():
+                protocol.sweep_receipt_timeouts(now)
+
+    receipt_sweep_task: asyncio.Task | None = None
+    if receipts:
+        receipt_sweep_task = asyncio.create_task(_receipt_sweep_loop())
+
     packet_ids = itertools.count()
     end_time = loop.time() + duration
     try:
@@ -471,12 +648,21 @@ async def run_local_cluster(
             await asyncio.sleep(rng.expovariate(traffic_rate))
         await asyncio.sleep(drain)
     finally:
-        if perturb_task is not None:
-            perturb_task.cancel()
-            try:
-                await perturb_task
-            except asyncio.CancelledError:
-                pass
+        for task in (perturb_task, receipt_sweep_task):
+            if task is not None:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        # Let a final drain elapse so receipts still in flight can arrive and
+        # confirm before we convert every remaining pending forward into a
+        # timeout; otherwise late-but-successful deliveries look like failures.
+        if receipts:
+            await asyncio.sleep(min(receipt_timeout, 1.0))
+            now = loop.time()
+            for protocol in protocols.values():
+                protocol.sweep_receipt_timeouts(now)
         for t in transports:
             t.close()
         # transport.close() schedules the underlying socket close on the
@@ -489,6 +675,7 @@ async def run_local_cluster(
         # see the same untouched state, and "learning across runs" would be
         # a no-op despite the state file existing.
         for protocol in protocols.values():
+            protocol.flush_pending_receipts()
             saver = getattr(protocol.solver, "save", None)
             if callable(saver):
                 saver()
@@ -507,6 +694,9 @@ def main() -> None:
     p.add_argument("--ttl", type=int, default=12)
     p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
     p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: number of disjoint-first-hop copies sent per packet")
+    p.add_argument("--redundancy-risk-tolerance", type=float, default=0.05, help="max extra learned peer-risk a diverse redundant hop may carry over the natural choice before falling back to reusing it")
+    p.add_argument("--receipts", action="store_true", help="signed delivery receipts: each forwarder learns the confirmed end-to-end fate of what it relayed, not just its own next-hop link")
+    p.add_argument("--receipt-timeout", type=float, default=4.0, help="seconds a forwarder waits for a signed receipt before treating the forward as a downstream failure")
     p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
     p.add_argument("--churn-recovery", type=float, default=0.4, help="probability a down node recovers per perturbation tick")
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
@@ -521,7 +711,8 @@ def main() -> None:
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
-        redundancy=args.redundancy,
+        redundancy=args.redundancy, redundancy_risk_tolerance=args.redundancy_risk_tolerance,
+        receipts=args.receipts, receipt_timeout=args.receipt_timeout,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, solver_name=args.solver,

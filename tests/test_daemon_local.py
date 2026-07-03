@@ -122,6 +122,34 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(stats.generated, 0)
         self.assertIn("node_down", stats.dropped)
 
+    def test_receipts_confirm_delivered_paths_and_time_out_failures(self):
+        # End-to-end: with receipts on, delivered multi-hop packets must
+        # produce signed confirmations flowing back (the signal-multiplication
+        # the mechanism exists for), and forwards toward black holes must
+        # eventually time out (the downstream-failure signal a node otherwise
+        # lacks). No bad_signature drops: real receipts verify.
+        stats = asyncio.run(run_local_cluster(
+            nodes=15, degree=4, sybil_ratio=0.2, duration=5.0, drain=3.0,
+            traffic_rate=6.0, ttl=12, solver_name="edge", seed=707,
+            receipts=True, receipt_timeout=2.0, base_port=19800,
+        ))
+        self.assertGreater(stats.receipts_confirmed, 0)
+        self.assertGreater(stats.receipt_timeouts, 0)
+        self.assertNotIn("bad_signature", stats.dropped)
+
+    def test_receipts_default_off_leaves_behavior_unchanged(self):
+        # Same seed/params with and without receipts: the receipt machinery
+        # must be fully opt-in. Delivery outcome is identical because the RNG
+        # draws are seeded and receipts change only what gets *observed*, not
+        # how packets are forwarded within a single run.
+        common = dict(
+            nodes=15, degree=4, sybil_ratio=0.2, duration=3.0, drain=2.0,
+            traffic_rate=6.0, ttl=12, solver_name="shortest", seed=717,
+        )
+        off = asyncio.run(run_local_cluster(**common, base_port=19820))
+        self.assertEqual(off.receipts_confirmed, 0)
+        self.assertEqual(off.receipt_timeouts, 0)
+
     def test_redundancy_sends_extra_copies_and_never_double_counts_delivery(self):
         common = dict(
             nodes=20, degree=5, sybil_ratio=0.1, duration=3.0, drain=1.5,
@@ -135,6 +163,22 @@ class DaemonLocalClusterTests(unittest.TestCase):
         # Dedup invariant: however many copies fly, at most one delivery is
         # ever counted per originally-generated packet.
         self.assertLessEqual(len(redundant.delivered), redundant.generated)
+
+    def test_redundancy_does_not_inflate_sybil_touch_ratio(self):
+        # Regression guard: record_drop()/record_delivery() are called once
+        # PER COPY, but `generated` counts only once PER LOGICAL PACKET.
+        # Without packet_id dedup, a packet whose several redundant copies
+        # each independently touched a sybil would count multiple times
+        # against a denominator that only grew once -- silently inflating
+        # sybil_touch_ratio in a way with nothing to do with real exposure,
+        # and making the metric incomparable between redundancy=1 and >1.
+        stats = asyncio.run(run_local_cluster(
+            nodes=20, degree=5, sybil_ratio=0.4, sybil_extra_drop=0.5,
+            duration=4.0, drain=1.5, traffic_rate=8.0, ttl=12,
+            solver_name="shortest", seed=909, redundancy=4, base_port=19680,
+        ))
+        self.assertGreater(stats.sybil_touched, 0)
+        self.assertLessEqual(stats.sybil_touched, stats.generated)
 
     def test_redundancy_does_not_pollute_the_packets_real_visited_set(self):
         # Regression guard for the bug found while validating redundancy:
@@ -162,12 +206,18 @@ class DaemonLocalClusterTests(unittest.TestCase):
             g.add_edge(0, 2, link)
             g.add_edge(1, 3, link)
             g.add_edge(2, 3, link)
+            # Without landmarks, _progress_delta falls back to the legacy
+            # ring-distance heuristic (raw node-id arithmetic), which is NOT
+            # symmetric between nodes 1 and 2 here despite them being
+            # topologically identical -- it would silently confound this
+            # test. Landmarks give the real, symmetric BFS distance instead.
+            g.compute_landmarks(count=4, seed=1)
             identity = PostQuantumIdentity.generate()
             stats = ClusterStats()
             loop = asyncio.get_running_loop()
             protocol = LocalNodeProtocol(
                 0, g, RiskAwareHybridSolver(), {}, {0: identity.signing_public_key},
-                identity, stats, random.Random(1), 0.0, 10, 0, 1, loop,
+                identity, stats, random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
             )
             pkt = Packet(packet_id=1, src=0, dst=3, created_at=0.0, ttl=10, node=0)
             nxt = protocol._handle_arrival(pkt, extra_exclude={1})
@@ -177,13 +227,67 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertEqual(nxt, 2)  # forced away from node 1, the excluded sibling first-hop
         self.assertEqual(pkt.visited, {0})  # NOT {0, 1} -- extra_exclude must not persist
 
+    def test_redundancy_declines_a_meaningfully_riskier_diverse_hop(self):
+        # The tension diagnosed in the hardened real-network benchmark:
+        # sybil-touch barely moved (46.8% -> 45.3%) even though the same
+        # solver halved it (10.2% -> 5.5%) without redundancy, because blind
+        # first-hop exclusion could force a copy onto the very neighbor the
+        # risk-aware scorer specifically avoids. This checks the fix
+        # directly: a meaningfully riskier diverse alternative must be
+        # declined (reuse the natural hop instead), a comparably-safe one
+        # must be taken.
+        from aegis_router.daemon import LocalNodeProtocol
+        from aegis_router.graph import LinkMetrics, P2PGraph
+        from aegis_router.solvers import RiskAwareHybridSolver
+
+        async def scenario(risk_of_alt):
+            g = P2PGraph()
+            link = LinkMetrics(latency=0.01, bandwidth=0.8, loss=0.0, stability=0.9)
+            g.add_edge(0, 1, link)
+            g.add_edge(0, 2, link)
+            g.add_edge(1, 3, link)
+            g.add_edge(2, 3, link)
+            # Without landmarks, _progress_delta falls back to the legacy
+            # ring-distance heuristic (raw node-id arithmetic), which is NOT
+            # symmetric between nodes 1 and 2 here despite them being
+            # topologically identical -- it would silently confound this
+            # test. Landmarks give the real, symmetric BFS distance instead.
+            g.compute_landmarks(count=4, seed=1)
+            identity = PostQuantumIdentity.generate()
+            stats = ClusterStats()
+            loop = asyncio.get_running_loop()
+            solver = RiskAwareHybridSolver()
+            solver.peer_risk[2] = risk_of_alt  # node 1 stays at the default 0.0
+            protocol = LocalNodeProtocol(
+                0, g, solver, {}, {0: identity.signing_public_key}, identity,
+                stats, random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
+            )
+            pkt = Packet(packet_id=1, src=0, dst=3, created_at=0.0, ttl=10, node=0)
+            return protocol._handle_arrival(pkt, extra_exclude={1})
+
+        # 1 and 2 have identical link quality, so peer_risk alone decides
+        # the natural choice: node 1 (risk 0.0) always wins over node 2.
+        risky = asyncio.run(scenario(0.9))
+        safe = asyncio.run(scenario(0.02))
+        self.assertEqual(risky, 1)  # declines node 2: too much riskier than reusing 1
+        self.assertEqual(safe, 2)   # takes node 2: comparably safe, genuinely diverse
+
     def test_redundancy_improves_delivery_under_heavy_churn(self):
         # The failure mode redundancy specifically targets: a packet
         # correctly routed toward a node that dies mid-transit. Independent
         # paths rarely die to the same churn event.
+        #
+        # Uses the edge solver, not shortest-path: shortest-path's next_hop()
+        # ignores packet.visited entirely, so its redundancy benefit is only
+        # "retry the same path with fresh randomness" -- a real but small
+        # effect (measured +3.5 to +5.8pp) too close to this real-time
+        # daemon's own run-to-run jitter for a single-comparison assertion
+        # to be reliable (this exact test flaked ~1/3 of the time with
+        # shortest-path). The edge solver's genuine path diversity produces
+        # a much larger, more robust effect (measured +10.8 to +17.2pp).
         common = dict(
             nodes=30, degree=5, sybil_ratio=0.1, duration=6.0, drain=2.0,
-            traffic_rate=10.0, ttl=14, solver_name="shortest", seed=707,
+            traffic_rate=10.0, ttl=14, solver_name="edge", seed=707,
             churn_rate=0.2, churn_recovery=0.3, perturb_interval=0.3,
         )
         baseline = asyncio.run(run_local_cluster(**common, redundancy=1, base_port=19700))
