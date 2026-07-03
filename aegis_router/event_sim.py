@@ -97,7 +97,11 @@ class EventDrivenSimulator:
         self._dropped: list[Packet] = []
         self._drop_reasons: Counter[str] = Counter()
         self._in_flight: list[Packet] = []
-        self._down_nodes: set[NodeId] = set()
+        # Aliased (not copied) to graph.offline_nodes so solvers reading the
+        # graph during next_hop() see the same live churn state -- a router
+        # would know its own directly-connected links are down, same as this
+        # simulator already assumes it knows link latency/loss/bandwidth.
+        self._down_nodes: set[NodeId] = self.graph.offline_nodes
         self._edges: list[tuple[NodeId, NodeId]] = [
             (a, b) for a in self.graph.adj for b in self.graph.adj[a] if a < b
         ]

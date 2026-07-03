@@ -27,12 +27,18 @@ class P2PGraph:
         self.adj: Dict[NodeId, Dict[NodeId, LinkMetrics]] = {}
         self.sybil_nodes: set[NodeId] = set()
         self._landmark_dist: Dict[NodeId, tuple[int, ...]] | None = None
+        # Nodes currently known offline on their directly-connected links.
+        # This models basic transport-layer liveness (a TCP reset, a missed
+        # keepalive) that any real node already has for its own peers -- not
+        # global topology or hidden Sybil-label knowledge. Populated/cleared
+        # by the simulator as churn happens; empty means "no live churn info".
+        self.offline_nodes: set[NodeId] = set()
 
     def add_node(self, node: NodeId, *, sybil: bool = False) -> None:
         self.adj.setdefault(node, {})
         if sybil:
             self.sybil_nodes.add(node)
-            
+
     def has_edge(self, a: NodeId, b: NodeId) -> bool:
         """Check if an edge exists between two nodes."""
         return a in self.adj and b in self.adj[a]
@@ -49,6 +55,12 @@ class P2PGraph:
     def neighbors(self, node: NodeId) -> List[NodeId]:
         return list(self.adj.get(node, {}).keys())
 
+    def reachable_neighbors(self, node: NodeId) -> List[NodeId]:
+        """Neighbors not currently known offline (see `offline_nodes`)."""
+        if not self.offline_nodes:
+            return self.neighbors(node)
+        return [nb for nb in self.adj.get(node, {}) if nb not in self.offline_nodes]
+
     def metrics(self, a: NodeId, b: NodeId) -> LinkMetrics:
         return self.adj[a][b]
 
@@ -56,7 +68,9 @@ class P2PGraph:
         """Classic shortest path by hop-count only.
 
         This intentionally ignores quality metrics, modelling the naive router that
-        attackers can exploit by offering many apparently-short links.
+        attackers can exploit by offering many apparently-short links. It still
+        skips links known offline: even a naive router would not attempt a
+        transport-layer-dead connection.
         """
         if src == dst:
             return dst
@@ -70,7 +84,9 @@ class P2PGraph:
             if node == dst:
                 return first
             for nb in self.adj[node]:
-                if nb in seen:
+                # An offline node cannot accept a connection at all, even if
+                # it happens to be the final destination.
+                if nb in seen or nb in self.offline_nodes:
                     continue
                 hop = nb if first is None else first
                 heapq.heappush(queue, (hops + 1, nb, hop))
@@ -142,7 +158,7 @@ class P2PGraph:
             if node == dst:
                 return first
             for nb, m in self.adj[node].items():
-                if nb in seen:
+                if nb in seen or nb in self.offline_nodes:
                     continue
                 hop = nb if first is None else first
                 heapq.heappush(queue, (cost + max(0.001, m.cost()), nb, hop))
