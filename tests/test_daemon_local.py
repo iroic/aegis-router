@@ -122,6 +122,34 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(stats.generated, 0)
         self.assertIn("node_down", stats.dropped)
 
+    def test_receipts_confirm_delivered_paths_and_time_out_failures(self):
+        # End-to-end: with receipts on, delivered multi-hop packets must
+        # produce signed confirmations flowing back (the signal-multiplication
+        # the mechanism exists for), and forwards toward black holes must
+        # eventually time out (the downstream-failure signal a node otherwise
+        # lacks). No bad_signature drops: real receipts verify.
+        stats = asyncio.run(run_local_cluster(
+            nodes=15, degree=4, sybil_ratio=0.2, duration=5.0, drain=3.0,
+            traffic_rate=6.0, ttl=12, solver_name="edge", seed=707,
+            receipts=True, receipt_timeout=2.0, base_port=19800,
+        ))
+        self.assertGreater(stats.receipts_confirmed, 0)
+        self.assertGreater(stats.receipt_timeouts, 0)
+        self.assertNotIn("bad_signature", stats.dropped)
+
+    def test_receipts_default_off_leaves_behavior_unchanged(self):
+        # Same seed/params with and without receipts: the receipt machinery
+        # must be fully opt-in. Delivery outcome is identical because the RNG
+        # draws are seeded and receipts change only what gets *observed*, not
+        # how packets are forwarded within a single run.
+        common = dict(
+            nodes=15, degree=4, sybil_ratio=0.2, duration=3.0, drain=2.0,
+            traffic_rate=6.0, ttl=12, solver_name="shortest", seed=717,
+        )
+        off = asyncio.run(run_local_cluster(**common, base_port=19820))
+        self.assertEqual(off.receipts_confirmed, 0)
+        self.assertEqual(off.receipt_timeouts, 0)
+
     def test_redundancy_sends_extra_copies_and_never_double_counts_delivery(self):
         common = dict(
             nodes=20, degree=5, sybil_ratio=0.1, duration=3.0, drain=1.5,
@@ -189,7 +217,7 @@ class DaemonLocalClusterTests(unittest.TestCase):
             loop = asyncio.get_running_loop()
             protocol = LocalNodeProtocol(
                 0, g, RiskAwareHybridSolver(), {}, {0: identity.signing_public_key},
-                identity, stats, random.Random(1), 0.0, 10, 0, 1, 0.12, loop,
+                identity, stats, random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
             )
             pkt = Packet(packet_id=1, src=0, dst=3, created_at=0.0, ttl=10, node=0)
             nxt = protocol._handle_arrival(pkt, extra_exclude={1})
@@ -232,7 +260,7 @@ class DaemonLocalClusterTests(unittest.TestCase):
             solver.peer_risk[2] = risk_of_alt  # node 1 stays at the default 0.0
             protocol = LocalNodeProtocol(
                 0, g, solver, {}, {0: identity.signing_public_key}, identity,
-                stats, random.Random(1), 0.0, 10, 0, 1, 0.12, loop,
+                stats, random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
             )
             pkt = Packet(packet_id=1, src=0, dst=3, created_at=0.0, ttl=10, node=0)
             return protocol._handle_arrival(pkt, extra_exclude={1})

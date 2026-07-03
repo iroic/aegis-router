@@ -14,6 +14,13 @@ class Packet:
     ttl: int
     node: NodeId | None = None
     visited: set[NodeId] = field(default_factory=set)
+    # Ordered forwarding chain [src, hop1, hop2, ...], each node appending
+    # itself as it forwards. Used by the daemon's delivery-receipt mechanism
+    # to route a signed receipt back along the reverse path. Unlike `visited`
+    # (an unordered dedup set), order matters here. In a real anonymous
+    # deployment this would be onion-layered so no single node sees the whole
+    # path; here it is in the clear for research measurement.
+    path: list[NodeId] = field(default_factory=list)
     hops: int = 0
     latency: float = 0.0
     queue_delay: float = 0.0

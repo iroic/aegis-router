@@ -37,25 +37,27 @@ class PostQuantumIdentity:
         )
 
 
-def packet_signing_bytes(packet: Packet) -> bytes:
-    """Stable packet bytes covered by the post-quantum signature.
+def _origin_signing_bytes(packet_id: int, src: int, dst: int, created_at: float) -> bytes:
+    """Canonical bytes for the origin-fixed fields of a packet.
 
-    Only fields that never change after the origin creates the packet are
-    signed. ttl, loss_risk and touched_sybil are NOT included even though an
-    earlier version of this function signed them: event_sim.py legitimately
-    mutates all three on every hop (ttl decrements, loss_risk/touched_sybil
-    accumulate), so a signature covering them could only ever verify at the
-    very first hop. This is the origin-authenticity signature checked by the
-    final recipient, not a per-hop transit MAC.
+    Shared by both the origin-authenticity signature (sign_packet, made by
+    src) and the delivery receipt (sign_receipt, made by dst) so a receipt
+    provably refers to exactly one originated packet. Only fields that never
+    change after origination are covered: ttl/loss_risk/touched_sybil mutate
+    every hop and so cannot be part of an end-to-end signature.
     """
-
     payload = {
-        "packet_id": packet.packet_id,
-        "src": packet.src,
-        "dst": packet.dst,
-        "created_at": packet.created_at,
+        "packet_id": packet_id,
+        "src": src,
+        "dst": dst,
+        "created_at": created_at,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def packet_signing_bytes(packet: Packet) -> bytes:
+    """Stable packet bytes covered by the origin-authenticity signature."""
+    return _origin_signing_bytes(packet.packet_id, packet.src, packet.dst, packet.created_at)
 
 
 def sign_packet(packet: Packet, signing_secret_key: bytes) -> str:
@@ -72,6 +74,34 @@ def verify_packet(packet: Packet, signing_public_key: bytes) -> bool:
     try:
         signature = base64.b64decode(encoded, validate=True)
         return bool(ml_dsa_44.verify(signing_public_key, packet_signing_bytes(packet), signature))
+    except Exception:
+        return False
+
+
+def sign_receipt(packet_id: int, src: int, dst: int, created_at: float, signing_secret_key: bytes) -> str:
+    """A delivery receipt: the destination signs the packet's origin fields,
+    producing unforgeable proof that this exact packet reached its dst. Sent
+    back along the reverse path so every forwarding node learns the
+    end-to-end fate of what it relayed, not just whether its own next-hop
+    link accepted the frame.
+    """
+    signature = ml_dsa_44.sign(signing_secret_key, _origin_signing_bytes(packet_id, src, dst, created_at))
+    return f"{SIGNATURE_PREFIX}{base64.b64encode(signature).decode('ascii')}"
+
+
+def verify_receipt(packet_id: int, src: int, dst: int, created_at: float, receipt_signature: str, dst_public_key: bytes) -> bool:
+    """Verify a delivery receipt against the claimed destination's public key.
+
+    A sybil cannot forge this: it would need dst's secret key. That is what
+    makes receipt-derived reputation evidence rather than opinion, unlike
+    peer-gossiped reputation which a sybil can lie into.
+    """
+    if not receipt_signature or not receipt_signature.startswith(SIGNATURE_PREFIX):
+        return False
+    encoded = receipt_signature[len(SIGNATURE_PREFIX):]
+    try:
+        signature = base64.b64decode(encoded, validate=True)
+        return bool(ml_dsa_44.verify(dst_public_key, _origin_signing_bytes(packet_id, src, dst, created_at), signature))
     except Exception:
         return False
 
