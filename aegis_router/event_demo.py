@@ -18,7 +18,8 @@ def fmt(s: EventStats) -> str:
         f"latency={s.avg_latency:6.3f} | "
         f"queue={s.avg_queue_delay:6.3f} | "
         f"risk={s.avg_loss_risk:6.3f} | "
-        f"sybil={s.sybil_touch_ratio*100:5.1f}%"
+        f"sybil={s.sybil_touch_ratio*100:5.1f}% | "
+        f"retx={s.retransmissions:3d}"
     )
 
 
@@ -46,6 +47,7 @@ def main() -> None:
     p.add_argument("--sybil-stealth", type=float, default=0.0, help="0=obvious sybil links, 1=sybil links advertise honest-looking metrics")
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
     p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
+    p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
     args = p.parse_args()
 
     def make_sim(solver, seed: int) -> EventDrivenSimulator:
@@ -65,6 +67,7 @@ def main() -> None:
             ttl=args.ttl,
             congestion_rate=args.congestion_rate,
             churn_rate=args.churn_rate,
+            link_retries=args.link_retries,
         )
 
     run_kwargs = dict(duration=args.duration, traffic_rate=args.traffic_rate, drain_time=args.drain)
