@@ -36,6 +36,7 @@ class EventStats:
     avg_queue_delay: float
     avg_loss_risk: float
     sybil_touch_ratio: float
+    retransmissions: int = 0
 
     @property
     def delivery_ratio(self) -> float:
@@ -68,6 +69,7 @@ class EventDrivenSimulator:
         churn_rate: float = 0.0,
         churn_recovery: float = 0.4,
         perturb_interval: float = 0.5,
+        link_retries: int = 0,
     ) -> None:
         self.graph = graph
         self.solver = solver
@@ -81,6 +83,12 @@ class EventDrivenSimulator:
         self.churn_rate = churn_rate               # P(up node goes down) per tick
         self.churn_recovery = churn_recovery       # P(down node recovers) per tick
         self.perturb_interval = perturb_interval   # seconds between perturbation ticks
+        # Hop-by-hop ARQ: retransmit a lost frame up to N times on the same
+        # link before declaring the hop lost. Each failed try costs one extra
+        # latency+service round. Breaks the (1-loss)^hops delivery ceiling at
+        # the price of bandwidth/latency overhead (counted in stats).
+        self.link_retries = max(0, link_retries)
+        self._retransmissions = 0
         self._events: list[tuple[float, int, Event]] = []
         self._counter = itertools.count()
         self._packets: dict[int, Packet] = {}
@@ -209,7 +217,18 @@ class EventDrivenSimulator:
         metrics = self.graph.metrics(pkt.node, nxt)
         extra_drop = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
         effective_loss = min(0.95, metrics.loss + extra_drop)
-        if self.rng.random() < effective_loss:
+        service = self.queue_service_time / max(0.05, metrics.bandwidth)
+        failed_tries = 0
+        lost = True
+        for _ in range(1 + self.link_retries):
+            if self.rng.random() >= effective_loss:
+                lost = False
+                break
+            failed_tries += 1
+        # Retransmissions = transmissions beyond the first attempt.
+        transmissions = failed_tries + (0 if lost else 1)
+        self._retransmissions += max(0, transmissions - 1)
+        if lost:
             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
             pkt.last_from = pkt.node
@@ -221,10 +240,10 @@ class EventDrivenSimulator:
         available = self._link_available.get(key, time)
         start = max(time, available)
         queue_delay = start - time
-        service = self.queue_service_time / max(0.05, metrics.bandwidth)
         self._link_available[key] = start + service
         pkt.queue_delay += queue_delay
-        pkt.latency += metrics.latency + queue_delay + service
+        # Each failed ARQ try costs one extra latency+service round trip.
+        pkt.latency += (metrics.latency + queue_delay + service) + failed_tries * (metrics.latency + service)
         pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
         pkt.last_from = pkt.node
@@ -265,4 +284,5 @@ class EventDrivenSimulator:
             avg_queue_delay=mean([p.queue_delay for p in all_packets]) if all_packets else 0.0,
             avg_loss_risk=mean([p.loss_risk for p in all_packets]) if all_packets else 0.0,
             sybil_touch_ratio=sum(1 for p in all_packets if p.touched_sybil) / max(1, len(all_packets)),
+            retransmissions=self._retransmissions,
         )

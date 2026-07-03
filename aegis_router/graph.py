@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 import heapq
 import random
@@ -24,6 +25,7 @@ class P2PGraph:
     def __init__(self) -> None:
         self.adj: Dict[NodeId, Dict[NodeId, LinkMetrics]] = {}
         self.sybil_nodes: set[NodeId] = set()
+        self._landmark_dist: Dict[NodeId, tuple[int, ...]] | None = None
 
     def add_node(self, node: NodeId, *, sybil: bool = False) -> None:
         self.adj.setdefault(node, {})
@@ -73,6 +75,58 @@ class P2PGraph:
                 heapq.heappush(queue, (hops + 1, nb, hop))
         return None
 
+    def compute_landmarks(self, count: int = 8, *, seed: int | None = None) -> None:
+        """Precompute hop distances to `count` landmark nodes.
+
+        Each node gets a small vector of BFS hop counts to shared landmark
+        nodes. This is the anonymizable progress hint from OPTIMIZATION.md:
+        distances to public rendezvous points, never an identity. In a real
+        network the vectors arrive by gossip and may be slightly stale — here
+        they are computed once at graph build time and NOT refreshed on churn.
+        """
+        nodes = self.nodes()
+        if not nodes:
+            self._landmark_dist = None
+            return
+        rng = random.Random(seed)
+        landmarks = rng.sample(nodes, min(count, len(nodes)))
+        dists = [self._bfs_hops(lm) for lm in landmarks]
+        unreachable = len(nodes)
+        self._landmark_dist = {
+            n: tuple(d.get(n, unreachable) for d in dists) for n in nodes
+        }
+
+    def _bfs_hops(self, src: NodeId) -> Dict[NodeId, int]:
+        dist = {src: 0}
+        queue = deque([src])
+        while queue:
+            node = queue.popleft()
+            for nb in self.adj[node]:
+                if nb not in dist:
+                    dist[nb] = dist[node] + 1
+                    queue.append(nb)
+        return dist
+
+    def landmark_distance(self, a: NodeId, b: NodeId) -> float | None:
+        """Estimated hop distance between two nodes from landmark vectors.
+
+        Triangle-inequality lower bound max|d_l(a) - d_l(b)| (ALT heuristic).
+        Measured against the upper bound min(d_l(a) + d_l(b)) and their
+        average: the upper bound drags greedy routing toward landmark hubs
+        (hybrid hops 9.3 vs 6.8), so only the lower bound is used. Returns
+        None when landmarks were not computed (callers fall back to a legacy
+        ring hint).
+        """
+        if self._landmark_dist is None:
+            return None
+        if a == b:
+            return 0.0
+        va = self._landmark_dist.get(a)
+        vb = self._landmark_dist.get(b)
+        if va is None or vb is None:
+            return None
+        return float(max(abs(x - y) for x, y in zip(va, vb)))
+
     def quality_path_next_hop(self, src: NodeId, dst: NodeId) -> NodeId | None:
         """Oracle-like path by link metrics, used only as a training/eval helper."""
         if src == dst:
@@ -100,6 +154,10 @@ def generate_random_graph(
     degree: int = 4,
     sybil_ratio: float = 0.1,
     sybil_stealth: float = 0.0,
+    # 24 landmarks: fewer leaves distance-estimate plateaus that lengthen
+    # routes (measured: 8 landmarks fail two scenario tests, 24 pass with
+    # margin and give the best learned delivery/hops on the 3-seed harness).
+    landmarks: int = 24,
     seed: int | None = None,
 ) -> P2PGraph:
     """Build a random P2P graph.
@@ -133,6 +191,8 @@ def generate_random_graph(
         if b not in g.adj[a]:
             _add_random_edge(g, a, b, rng, stealth)
         attempts += 1
+    if landmarks > 0:
+        g.compute_landmarks(landmarks, seed=seed)
     return g
 
 

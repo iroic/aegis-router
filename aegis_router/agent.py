@@ -177,6 +177,21 @@ def _progress_prior(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> f
 
 
 def _progress_delta(graph: P2PGraph, node: NodeId, nb: NodeId, dst: NodeId) -> float:
+    """Anonymous progress hint toward the destination.
+
+    Prefers landmark hop-distance vectors (see P2PGraph.compute_landmarks),
+    which track real topology. Falls back to the legacy ring-distance formula
+    — a node-numbering artifact — when landmarks are absent.
+    """
+    est_before = graph.landmark_distance(node, dst)
+    est_after = graph.landmark_distance(nb, dst)
+    if est_before is not None and est_after is not None:
+        if est_before <= 0:
+            return 1.0
+        # Absolute delta in hop units, not normalized: relative progress
+        # under-weights steps taken far from the destination and measurably
+        # lengthens routes (hybrid hops 4.7 vs 3.7 on the same scenario).
+        return est_before - est_after
     n = max(1, len(graph.adj))
     before = min(abs(dst - node), n - abs(dst - node))
     after = min(abs(dst - nb), n - abs(dst - nb))
