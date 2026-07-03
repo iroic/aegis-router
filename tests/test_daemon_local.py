@@ -52,6 +52,18 @@ class DaemonLocalClusterTests(unittest.TestCase):
         totals = sum(v["delivered"] + v["drops"] for v in data["edges"].values())
         self.assertGreater(totals, 0)
 
+    def test_link_retries_reduce_link_loss_drops(self):
+        common = dict(
+            nodes=20, degree=4, sybil_ratio=0.1, duration=3.0, drain=1.5,
+            traffic_rate=8.0, ttl=12, solver_name="shortest", seed=303,
+        )
+        baseline = asyncio.run(run_local_cluster(**common, link_retries=0, base_port=19400))
+        with_arq = asyncio.run(run_local_cluster(**common, link_retries=2, base_port=19450))
+
+        self.assertEqual(baseline.retransmissions, 0)
+        self.assertGreater(with_arq.retransmissions, 0)
+        self.assertGreaterEqual(with_arq.delivery_ratio, baseline.delivery_ratio)
+
     def test_tampered_signature_is_actually_rejected(self):
         # Negative control: proves verify_packet's rejection path is live,
         # not a check that always silently passes.

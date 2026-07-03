@@ -79,6 +79,7 @@ class ClusterStats:
     generated: int = 0
     delivered: list[Packet] = field(default_factory=list)
     dropped: Counter = field(default_factory=Counter)
+    retransmissions: int = 0
 
     def record_generated(self) -> None:
         self.generated += 1
@@ -89,15 +90,23 @@ class ClusterStats:
     def record_drop(self, reason: str) -> None:
         self.dropped[reason] += 1
 
+    def record_retransmissions(self, n: int) -> None:
+        self.retransmissions += n
+
+    @property
+    def delivery_ratio(self) -> float:
+        return len(self.delivered) / max(1, self.generated)
+
     def summary(self) -> dict:
         n = len(self.delivered)
         return {
             "generated": self.generated,
             "delivered": n,
-            "delivery_ratio": n / max(1, self.generated),
+            "delivery_ratio": self.delivery_ratio,
             "dropped": dict(self.dropped),
             "avg_hops": mean(p.hops for p in self.delivered) if n else None,
             "avg_latency": mean(p.latency for p in self.delivered) if n else None,
+            "retransmissions": self.retransmissions,
         }
 
 
@@ -117,6 +126,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         rng: random.Random,
         sybil_extra_drop: float,
         ttl: int,
+        link_retries: int,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.node_id = node_id
@@ -129,6 +139,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self.rng = rng
         self.sybil_extra_drop = sybil_extra_drop
         self.ttl = ttl
+        self.link_retries = max(0, link_retries)
         self.loop = loop
         self.transport: asyncio.DatagramTransport | None = None
 
@@ -170,7 +181,23 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         m = self.graph.metrics(pkt.node, nxt)
         extra = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
         effective_loss = min(0.95, m.loss + extra)
-        success = self.rng.random() >= effective_loss
+        # Hop-by-hop ARQ: retry a lost frame on the same link before giving
+        # up. Ported from event_sim.py, where it broke the (1-loss)^hops
+        # delivery ceiling; ~200-line link_loss dominance at low sybil ratio
+        # is exactly that ceiling showing up on real sockets. Each failed
+        # try costs one extra link-latency round, same as the simulator.
+        failed_tries = 0
+        success = False
+        for _ in range(1 + self.link_retries):
+            if self.rng.random() >= effective_loss:
+                success = True
+                break
+            failed_tries += 1
+        # Retransmissions = transmissions beyond the first attempt. A single
+        # failed try with no retries left is NOT a retransmission -- it's
+        # just the one attempt everyone always makes.
+        transmissions = failed_tries + (1 if success else 0)
+        self.stats.record_retransmissions(max(0, transmissions - 1))
         self._observe_own_link(nxt, success=success)
         if not success:
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
@@ -184,8 +211,10 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         payload = json.dumps(packet_to_wire(pkt)).encode("utf-8")
         # Emulate the declared link latency as a real scheduling delay so
         # avg_latency reflects something other than loopback noise; the
-        # datagram itself is still sent over a real socket.
-        self.loop.call_later(m.latency, self._send_now, payload, nxt)
+        # datagram itself is still sent over a real socket. Failed tries
+        # before the eventual success each cost one extra latency round.
+        delay = m.latency * (1 + failed_tries)
+        self.loop.call_later(delay, self._send_now, payload, nxt)
 
     def _observe_own_link(self, nxt: NodeId, *, success: bool) -> None:
         """Feed the local solver's reputation learner from THIS hop's own
@@ -213,7 +242,13 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         )
 
     def _send_now(self, payload: bytes, nxt: NodeId) -> None:
-        assert self.transport is not None
+        # A delayed call_later (ARQ retries and per-hop latency both push
+        # the actual send past the drain window) can still be pending when
+        # run_local_cluster closes every transport at shutdown. Firing into
+        # an already-closed transport isn't an error worth crashing over --
+        # the packet is simply lost past the measurement window.
+        if self.transport is None or self.transport.is_closing():
+            return
         host, port = self.registry[nxt]
         self.transport.sendto(payload, (host, port))
 
@@ -236,6 +271,7 @@ async def run_local_cluster(
     traffic_rate: float = 3.0,
     ttl: int = 12,
     sybil_extra_drop: float = 0.12,
+    link_retries: int = 0,
     solver_name: str = "edge",
     seed: int = 7,
     base_port: int = 19000,
@@ -255,7 +291,7 @@ async def run_local_cluster(
         solver = _make_solver(solver_name, seed=seed * 1000 + n)
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
-            random.Random(seed + 100 + n), sybil_extra_drop, ttl, loop,
+            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries, loop,
         )
         transport, _ = await loop.create_datagram_endpoint(lambda p=protocol: p, local_addr=registry[n])
         protocols[n] = protocol
@@ -298,6 +334,7 @@ def main() -> None:
     p.add_argument("--drain", type=float, default=2.0)
     p.add_argument("--traffic-rate", type=float, default=3.0)
     p.add_argument("--ttl", type=int, default=12)
+    p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
     p.add_argument("--solver", choices=["shortest", "edge"], default="edge")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--base-port", type=int, default=19000)
@@ -306,7 +343,8 @@ def main() -> None:
     stats = asyncio.run(run_local_cluster(
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         duration=args.duration, drain=args.drain, traffic_rate=args.traffic_rate,
-        ttl=args.ttl, solver_name=args.solver, seed=args.seed, base_port=args.base_port,
+        ttl=args.ttl, link_retries=args.link_retries, solver_name=args.solver,
+        seed=args.seed, base_port=args.base_port,
     ))
     print(json.dumps(stats.summary(), indent=2))
 
