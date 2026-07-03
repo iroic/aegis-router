@@ -94,18 +94,31 @@ class ClusterStats:
     # first copy of every packet is "free" -- it's what non-redundant mode
     # also sends). Bandwidth overhead accounting, parallel to retransmissions.
     redundant_copies: int = 0
+    # Dedup for sybil-touch counting, same idea as _delivered_ids on
+    # LocalNodeProtocol: with redundancy > 1, several independent copies of
+    # the same logical packet_id each get their own record_drop()/
+    # record_delivery() call. Without this, a packet whose copies each
+    # touched a sybil would count multiple times against a `generated`
+    # count that only increments once per logical packet -- inflating
+    # sybil_touch_ratio in a way that has nothing to do with actual
+    # exposure, and making it incomparable between redundancy=1 and >1 runs.
+    _sybil_touched_ids: set[int] = field(default_factory=set, repr=False)
 
     def record_generated(self) -> None:
         self.generated += 1
 
     def record_delivery(self, pkt: Packet) -> None:
         self.delivered.append(pkt)
-        if pkt.touched_sybil:
-            self.sybil_touched += 1
+        self._count_sybil_touch_once(pkt)
 
     def record_drop(self, reason: str, pkt: Packet | None = None) -> None:
         self.dropped[reason] += 1
-        if pkt is not None and pkt.touched_sybil:
+        if pkt is not None:
+            self._count_sybil_touch_once(pkt)
+
+    def _count_sybil_touch_once(self, pkt: Packet) -> None:
+        if pkt.touched_sybil and pkt.packet_id not in self._sybil_touched_ids:
+            self._sybil_touched_ids.add(pkt.packet_id)
             self.sybil_touched += 1
 
     def record_retransmissions(self, n: int) -> None:
@@ -155,6 +168,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         ttl: int,
         link_retries: int,
         redundancy: int,
+        redundancy_risk_tolerance: float,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.node_id = node_id
@@ -169,6 +183,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self.ttl = ttl
         self.link_retries = max(0, link_retries)
         self.redundancy = max(1, redundancy)
+        self.redundancy_risk_tolerance = redundancy_risk_tolerance
         self.loop = loop
         self.transport: asyncio.DatagramTransport | None = None
         # Dedup for redundant copies of the same packet_id arriving via
@@ -257,15 +272,46 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
             return None
         pkt.visited.add(pkt.node)
         if extra_exclude:
-            pkt.visited |= extra_exclude
-        nxt = self.solver.next_hop(self.graph, pkt)
-        if extra_exclude:
-            pkt.visited -= extra_exclude
+            nxt = self._risk_aware_diverse_hop(pkt, extra_exclude)
+        else:
+            nxt = self.solver.next_hop(self.graph, pkt)
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
             self.stats.record_drop("no_route", pkt)
             return None
         self._forward(pkt, nxt)
         return nxt
+
+    def _risk_aware_diverse_hop(self, pkt: Packet, exclude: set[NodeId]) -> NodeId | None:
+        """Bias toward a first hop not in `exclude`, but only when doing so
+        doesn't trade security for bandwidth.
+
+        Measured consequence of blind exclusion: in the hardened real-network
+        benchmark, redundancy raised delivery (+13pp) but barely moved
+        sybil-touch (46.8% -> 45.3%, shortest vs edge) even though the same
+        solver halved it (10.2% -> 5.5%) in a lower-sybil-ratio run without
+        redundancy. Forcing a sibling copy away from its natural best choice
+        can push it onto the very neighbor the risk-aware scorer was trying
+        to avoid -- there was no other reason for that neighbor to have
+        scored worse. This compares the natural (unbiased) choice against
+        the diversified one using the solver's own LEARNED peer reputation
+        (never graph.sybil_nodes -- the router has no ground-truth oracle,
+        only behavior it has observed) and only takes the diverse option if
+        it isn't meaningfully riskier.
+        """
+        natural = self.solver.next_hop(self.graph, pkt)
+        if natural is None or natural not in exclude:
+            return natural  # nothing to trade off: already diverse, or no route at all
+        pkt.visited |= exclude
+        diverse = self.solver.next_hop(self.graph, pkt)
+        pkt.visited -= exclude
+        if diverse is None or diverse == natural:
+            return natural  # no alternative exists; reusing the same hop is the only option
+        peer_risk = getattr(self.solver, "peer_risk", None)
+        if peer_risk is None:
+            return diverse  # solver has no reputation signal to protect with (e.g. ShortestPathSolver)
+        if peer_risk[diverse] <= peer_risk[natural] + self.redundancy_risk_tolerance:
+            return diverse  # comparably safe: a genuinely different path is worth it
+        return natural  # diverse alternative is meaningfully riskier; not worth the exposure
 
     def _forward(self, pkt: Packet, nxt: NodeId) -> None:
         # The solver decided on `nxt` from a snapshot of graph.offline_nodes
@@ -422,6 +468,7 @@ async def run_local_cluster(
     sybil_extra_drop: float = 0.12,
     link_retries: int = 0,
     redundancy: int = 1,
+    redundancy_risk_tolerance: float = 0.05,
     churn_rate: float = 0.0,
     churn_recovery: float = 0.4,
     congestion_rate: float = 0.0,
@@ -446,7 +493,8 @@ async def run_local_cluster(
         solver = _make_solver(solver_name, seed=seed * 1000 + n)
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
-            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries, redundancy, loop,
+            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries,
+            redundancy, redundancy_risk_tolerance, loop,
         )
         transport, _ = await loop.create_datagram_endpoint(lambda p=protocol: p, local_addr=registry[n])
         protocols[n] = protocol
@@ -507,6 +555,7 @@ def main() -> None:
     p.add_argument("--ttl", type=int, default=12)
     p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
     p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: number of disjoint-first-hop copies sent per packet")
+    p.add_argument("--redundancy-risk-tolerance", type=float, default=0.05, help="max extra learned peer-risk a diverse redundant hop may carry over the natural choice before falling back to reusing it")
     p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
     p.add_argument("--churn-recovery", type=float, default=0.4, help="probability a down node recovers per perturbation tick")
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
@@ -521,7 +570,7 @@ def main() -> None:
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
-        redundancy=args.redundancy,
+        redundancy=args.redundancy, redundancy_risk_tolerance=args.redundancy_risk_tolerance,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, solver_name=args.solver,

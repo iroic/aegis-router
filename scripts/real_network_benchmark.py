@@ -46,7 +46,7 @@ async def _run_seed(args, topo_seed: int, base_port: int) -> dict:
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
-        redundancy=args.redundancy,
+        redundancy=args.redundancy, redundancy_risk_tolerance=args.redundancy_risk_tolerance,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, seed=topo_seed,
@@ -124,6 +124,7 @@ def main() -> None:
     p.add_argument("--ttl", type=int, default=16)
     p.add_argument("--link-retries", type=int, default=0)
     p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: disjoint-first-hop copies per packet")
+    p.add_argument("--redundancy-risk-tolerance", type=float, default=0.12)
     p.add_argument("--churn-rate", type=float, default=0.0)
     p.add_argument("--churn-recovery", type=float, default=0.4)
     p.add_argument("--congestion-rate", type=float, default=0.0)
