@@ -14,8 +14,22 @@ class PostQuantumCryptoTests(unittest.TestCase):
         self.assertIsNotNone(packet.signature)
         self.assertTrue(verify_packet(packet, identity.signing_public_key))
 
-        packet.ttl = 7
+        packet.dst = 3
         self.assertFalse(verify_packet(packet, identity.signing_public_key))
+
+    def test_signature_survives_legitimate_per_hop_mutation(self):
+        # ttl, loss_risk and touched_sybil legitimately change on every hop
+        # (see event_sim.py); the origin-authenticity signature must still
+        # verify at the destination after those fields have moved.
+        identity = PostQuantumIdentity.generate()
+        packet = Packet(packet_id=1, src=1, dst=2, created_at=0.0, ttl=8)
+        sign_packet(packet, identity.signing_secret_key)
+
+        packet.ttl -= 3
+        packet.loss_risk = 0.42
+        packet.touched_sybil = True
+
+        self.assertTrue(verify_packet(packet, identity.signing_public_key))
 
     def test_ml_kem_768_shared_secret_roundtrip(self):
         identity = PostQuantumIdentity.generate()

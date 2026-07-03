@@ -40,9 +40,13 @@ class PostQuantumIdentity:
 def packet_signing_bytes(packet: Packet) -> bytes:
     """Stable packet bytes covered by the post-quantum signature.
 
-    Only immutable/security-relevant fields are signed. Runtime routing fields
-    such as current node, visited set, latency and queue delay change at each hop
-    and therefore are intentionally excluded.
+    Only fields that never change after the origin creates the packet are
+    signed. ttl, loss_risk and touched_sybil are NOT included even though an
+    earlier version of this function signed them: event_sim.py legitimately
+    mutates all three on every hop (ttl decrements, loss_risk/touched_sybil
+    accumulate), so a signature covering them could only ever verify at the
+    very first hop. This is the origin-authenticity signature checked by the
+    final recipient, not a per-hop transit MAC.
     """
 
     payload = {
@@ -50,9 +54,6 @@ def packet_signing_bytes(packet: Packet) -> bytes:
         "src": packet.src,
         "dst": packet.dst,
         "created_at": packet.created_at,
-        "ttl": packet.ttl,
-        "loss_risk": packet.loss_risk,
-        "touched_sybil": packet.touched_sybil,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
