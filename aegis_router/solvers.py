@@ -58,6 +58,13 @@ class RiskAwareHybridSolver:
         neighbors = graph.reachable_neighbors(packet.node)
         if not neighbors:
             return None
+        if packet.visited:
+            # Hard-exclude visited nodes when possible: revisiting one is a
+            # guaranteed "loop" drop on arrival, not merely a scored-down
+            # choice, so it should only ever be a last resort.
+            unvisited = [n for n in neighbors if n not in packet.visited]
+            if unvisited:
+                neighbors = unvisited
         viable = []
         for nb in neighbors:
             m = graph.metrics(packet.node, nb)

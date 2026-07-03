@@ -108,6 +108,14 @@ class HybridRoutingScorer:
         neighbors = graph.reachable_neighbors(node)
         if not neighbors:
             return None
+        if visited:
+            # Hard-exclude visited nodes when an alternative exists: a soft
+            # loop_penalty can still lose to a visited neighbor when every
+            # unvisited option looks worse (offline, high risk), and revisiting
+            # is a guaranteed drop on arrival, not just a bad choice.
+            unvisited = [n for n in neighbors if n not in visited]
+            if unvisited:
+                neighbors = unvisited
         return max(
             neighbors,
             key=lambda nb: self.score(
