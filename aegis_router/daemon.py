@@ -170,7 +170,9 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         m = self.graph.metrics(pkt.node, nxt)
         extra = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
         effective_loss = min(0.95, m.loss + extra)
-        if self.rng.random() < effective_loss:
+        success = self.rng.random() >= effective_loss
+        self._observe_own_link(nxt, success=success)
+        if not success:
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
             self.stats.record_drop(reason)
             return
@@ -184,6 +186,31 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         # avg_latency reflects something other than loopback noise; the
         # datagram itself is still sent over a real socket.
         self.loop.call_later(m.latency, self._send_now, payload, nxt)
+
+    def _observe_own_link(self, nxt: NodeId, *, success: bool) -> None:
+        """Feed the local solver's reputation learner from THIS hop's own
+        outcome, not the packet's eventual end-to-end fate.
+
+        A real node has no free ACK channel telling it whether a packet it
+        forwarded was delivered several hops later (event_sim.py's shared,
+        single-solver model gets to assume that global view; each daemon
+        node here has its own independent, local-only solver instance and
+        state file, which is the more realistic assumption for a real
+        decentralized network). What a node genuinely knows is whether its
+        own transmission onto the wire to `nxt` succeeded or was dropped --
+        that is what gets reported here.
+        """
+        observer = getattr(self.solver, "observe_result", None)
+        if observer is None:
+            return
+        observer(
+            neighbor=nxt,
+            delivered=success,
+            dropped=not success,
+            touched_sybil=nxt in self.graph.sybil_nodes,
+            reason=None if success else ("sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"),
+            from_node=self.node_id,
+        )
 
     def _send_now(self, payload: bytes, nxt: NodeId) -> None:
         assert self.transport is not None
@@ -246,6 +273,19 @@ async def run_local_cluster(
     finally:
         for t in transports:
             t.close()
+        # transport.close() schedules the underlying socket close on the
+        # event loop rather than releasing it synchronously; without this,
+        # a second run reusing the same ports can race and hit
+        # "Address already in use".
+        await asyncio.sleep(0.1)
+        # Persist learned reputation so a subsequent run (same seed) resumes
+        # from it -- without this, EdgeLearningSolver's load() would always
+        # see the same untouched state, and "learning across runs" would be
+        # a no-op despite the state file existing.
+        for protocol in protocols.values():
+            saver = getattr(protocol.solver, "save", None)
+            if callable(saver):
+                saver()
     return stats
 
 
