@@ -90,6 +90,10 @@ class ClusterStats:
     # later for an unrelated reason; this is the security-relevant exposure
     # metric (matches EventStats.sybil_touch_ratio in event_sim.py).
     sybil_touched: int = 0
+    # Extra copies sent for source-path redundancy, beyond the first (the
+    # first copy of every packet is "free" -- it's what non-redundant mode
+    # also sends). Bandwidth overhead accounting, parallel to retransmissions.
+    redundant_copies: int = 0
 
     def record_generated(self) -> None:
         self.generated += 1
@@ -106,6 +110,9 @@ class ClusterStats:
 
     def record_retransmissions(self, n: int) -> None:
         self.retransmissions += n
+
+    def record_redundant_copy(self) -> None:
+        self.redundant_copies += 1
 
     @property
     def delivery_ratio(self) -> float:
@@ -126,6 +133,7 @@ class ClusterStats:
             "avg_latency": mean(p.latency for p in self.delivered) if n else None,
             "retransmissions": self.retransmissions,
             "sybil_touch_ratio": self.sybil_touch_ratio,
+            "redundant_copies": self.redundant_copies,
         }
 
 
@@ -146,6 +154,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         sybil_extra_drop: float,
         ttl: int,
         link_retries: int,
+        redundancy: int,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.node_id = node_id
@@ -159,8 +168,12 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self.sybil_extra_drop = sybil_extra_drop
         self.ttl = ttl
         self.link_retries = max(0, link_retries)
+        self.redundancy = max(1, redundancy)
         self.loop = loop
         self.transport: asyncio.DatagramTransport | None = None
+        # Dedup for redundant copies of the same packet_id arriving via
+        # different paths: only the first arrival counts as delivery.
+        self._delivered_ids: set[int] = set()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport  # type: ignore[assignment]
@@ -170,37 +183,89 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self._handle_arrival(pkt)
 
     def send_new_packet(self, dst: NodeId, packet_id: int) -> None:
-        pkt = Packet(packet_id=packet_id, src=self.node_id, dst=dst, created_at=time.monotonic(), ttl=self.ttl, node=self.node_id)
-        sign_packet(pkt, self.identity.signing_secret_key)
-        self._handle_arrival(pkt)
+        # Source-only path redundancy: send up to `redundancy` copies of the
+        # same packet_id. Copies are biased toward a DIFFERENT first hop via
+        # the existing hard-exclusion-of-visited-nodes logic (added earlier
+        # this session to kill routing loops), with no new solver-side code
+        # -- but only for solvers whose next_hop() actually reads
+        # packet.visited (RiskAwareHybridSolver and its edge/adaptive-risk
+        # descendants). ShortestPathSolver.next_hop() is a pure BFS that
+        # ignores visited entirely, so for it every copy is a fresh
+        # whole-path retry with independent randomness rather than a
+        # genuinely different route -- still a real, measured effect (each
+        # copy re-rolls its own link_loss/sybil_drop/churn-timing draws
+        # along the way), just a different mechanism.
+        #
+        # Targets the node_down failure mode diagnosed under churn: a
+        # packet correctly routed toward a node that dies mid-transit.
+        # Independent attempts rarely die to the same churn event, so
+        # redundancy recovers most of that loss at the cost of
+        # (redundancy - 1) extra copies of wire traffic.
+        chosen_first_hops: set[NodeId] = set()
+        for i in range(self.redundancy):
+            pkt = Packet(packet_id=packet_id, src=self.node_id, dst=dst, created_at=time.monotonic(), ttl=self.ttl, node=self.node_id)
+            sign_packet(pkt, self.identity.signing_secret_key)
+            nxt = self._handle_arrival(pkt, extra_exclude=chosen_first_hops)
+            if nxt is None:
+                break  # no route at all for this copy; further copies would fare no better
+            chosen_first_hops.add(nxt)
+            # Every copy beyond the first is overhead, whether or not it
+            # landed on a genuinely new hop -- a low-degree node may have no
+            # alternative to offer, in which case this is a plain duplicate,
+            # not wasted-but-still-a-cost bandwidth.
+            if i > 0:
+                self.stats.record_redundant_copy()
 
-    def _handle_arrival(self, pkt: Packet) -> None:
+    def _handle_arrival(self, pkt: Packet, *, extra_exclude: set[NodeId] | None = None) -> NodeId | None:
+        """Process an arriving (or freshly originated) packet.
+
+        Returns the next hop it was forwarded to, or None if it was
+        delivered, deduplicated, or dropped without forwarding -- used by
+        send_new_packet() to pick a distinct first hop for each redundant copy.
+
+        `extra_exclude` is ONLY ever passed by send_new_packet(), for a
+        packet's very first decision at its own origin. It biases just that
+        one next_hop() call away from hops already claimed by sibling
+        redundant copies, then is stripped again before the packet is
+        forwarded -- it must never leak into the packet's real, persistent
+        `visited` set, or this copy's own later, perfectly legitimate visit
+        to one of those nodes (it has never actually been there) would be
+        misreported as a loop several hops into a completely different path.
+        """
         pkt.node = self.node_id
         if pkt.node == pkt.dst:
+            if pkt.packet_id in self._delivered_ids:
+                return None  # a redundant copy arrived after the first; not a failure, just discard
             if not verify_packet(pkt, self.pubkeys[pkt.src]):
                 self.stats.record_drop("bad_signature", pkt)
-                return
+                return None
+            self._delivered_ids.add(pkt.packet_id)
             pkt.latency = time.monotonic() - pkt.created_at
             self.stats.record_delivery(pkt)
-            return
+            return None
         # Arrived at a node that has since churned offline. The hop that
         # delivered us here made a decision that was correct at the time;
         # not its fault, so no observe_result call (matches event_sim.py).
         if self.node_id in self.graph.offline_nodes:
             self.stats.record_drop("node_down", pkt)
-            return
+            return None
         if pkt.node in pkt.visited:
             self.stats.record_drop("loop", pkt)
-            return
+            return None
         if pkt.ttl <= 0:
             self.stats.record_drop("ttl_expired", pkt)
-            return
+            return None
         pkt.visited.add(pkt.node)
+        if extra_exclude:
+            pkt.visited |= extra_exclude
         nxt = self.solver.next_hop(self.graph, pkt)
+        if extra_exclude:
+            pkt.visited -= extra_exclude
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
             self.stats.record_drop("no_route", pkt)
-            return
+            return None
         self._forward(pkt, nxt)
+        return nxt
 
     def _forward(self, pkt: Packet, nxt: NodeId) -> None:
         # The solver decided on `nxt` from a snapshot of graph.offline_nodes
@@ -356,6 +421,7 @@ async def run_local_cluster(
     ttl: int = 12,
     sybil_extra_drop: float = 0.12,
     link_retries: int = 0,
+    redundancy: int = 1,
     churn_rate: float = 0.0,
     churn_recovery: float = 0.4,
     congestion_rate: float = 0.0,
@@ -380,7 +446,7 @@ async def run_local_cluster(
         solver = _make_solver(solver_name, seed=seed * 1000 + n)
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
-            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries, loop,
+            random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries, redundancy, loop,
         )
         transport, _ = await loop.create_datagram_endpoint(lambda p=protocol: p, local_addr=registry[n])
         protocols[n] = protocol
@@ -440,6 +506,7 @@ def main() -> None:
     p.add_argument("--traffic-rate", type=float, default=3.0)
     p.add_argument("--ttl", type=int, default=12)
     p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
+    p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: number of disjoint-first-hop copies sent per packet")
     p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
     p.add_argument("--churn-recovery", type=float, default=0.4, help="probability a down node recovers per perturbation tick")
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
@@ -454,6 +521,7 @@ def main() -> None:
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
+        redundancy=args.redundancy,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, solver_name=args.solver,

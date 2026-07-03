@@ -122,6 +122,75 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(stats.generated, 0)
         self.assertIn("node_down", stats.dropped)
 
+    def test_redundancy_sends_extra_copies_and_never_double_counts_delivery(self):
+        common = dict(
+            nodes=20, degree=5, sybil_ratio=0.1, duration=3.0, drain=1.5,
+            traffic_rate=8.0, ttl=12, solver_name="shortest", seed=606,
+        )
+        baseline = asyncio.run(run_local_cluster(**common, redundancy=1, base_port=19600))
+        redundant = asyncio.run(run_local_cluster(**common, redundancy=3, base_port=19650))
+
+        self.assertEqual(baseline.redundant_copies, 0)
+        self.assertGreater(redundant.redundant_copies, 0)
+        # Dedup invariant: however many copies fly, at most one delivery is
+        # ever counted per originally-generated packet.
+        self.assertLessEqual(len(redundant.delivered), redundant.generated)
+
+    def test_redundancy_does_not_pollute_the_packets_real_visited_set(self):
+        # Regression guard for the bug found while validating redundancy:
+        # extra_exclude (used to bias a sibling copy's first hop) leaked
+        # into the packet's real, persistent visited set, so a legitimate
+        # later revisit of one of those nodes (this copy never actually
+        # went there) got misreported as a loop far from the origin --
+        # earlier measurement showed 50-75 fake "loop" drops per run that
+        # vanished once this was fixed.
+        #
+        # Uses RiskAwareHybridSolver, not ShortestPathSolver: the latter's
+        # next_hop() is a pure BFS that never reads packet.visited at all,
+        # so extra_exclude has no way to influence its choice (for that
+        # solver, each redundant copy is a fresh whole-path retry with
+        # independent randomness, not a genuinely different first hop --
+        # still a real effect, just a different mechanism than this test).
+        from aegis_router.daemon import LocalNodeProtocol
+        from aegis_router.graph import LinkMetrics, P2PGraph
+        from aegis_router.solvers import RiskAwareHybridSolver
+
+        async def scenario():
+            g = P2PGraph()
+            link = LinkMetrics(latency=0.01, bandwidth=0.8, loss=0.0, stability=0.9)
+            g.add_edge(0, 1, link)
+            g.add_edge(0, 2, link)
+            g.add_edge(1, 3, link)
+            g.add_edge(2, 3, link)
+            identity = PostQuantumIdentity.generate()
+            stats = ClusterStats()
+            loop = asyncio.get_running_loop()
+            protocol = LocalNodeProtocol(
+                0, g, RiskAwareHybridSolver(), {}, {0: identity.signing_public_key},
+                identity, stats, random.Random(1), 0.0, 10, 0, 1, loop,
+            )
+            pkt = Packet(packet_id=1, src=0, dst=3, created_at=0.0, ttl=10, node=0)
+            nxt = protocol._handle_arrival(pkt, extra_exclude={1})
+            return pkt, nxt
+
+        pkt, nxt = asyncio.run(scenario())
+        self.assertEqual(nxt, 2)  # forced away from node 1, the excluded sibling first-hop
+        self.assertEqual(pkt.visited, {0})  # NOT {0, 1} -- extra_exclude must not persist
+
+    def test_redundancy_improves_delivery_under_heavy_churn(self):
+        # The failure mode redundancy specifically targets: a packet
+        # correctly routed toward a node that dies mid-transit. Independent
+        # paths rarely die to the same churn event.
+        common = dict(
+            nodes=30, degree=5, sybil_ratio=0.1, duration=6.0, drain=2.0,
+            traffic_rate=10.0, ttl=14, solver_name="shortest", seed=707,
+            churn_rate=0.2, churn_recovery=0.3, perturb_interval=0.3,
+        )
+        baseline = asyncio.run(run_local_cluster(**common, redundancy=1, base_port=19700))
+        redundant = asyncio.run(run_local_cluster(**common, redundancy=3, base_port=19750))
+
+        self.assertGreaterEqual(redundant.delivery_ratio, baseline.delivery_ratio)
+
     def test_tampered_signature_is_actually_rejected(self):
         # Negative control: proves verify_packet's rejection path is live,
         # not a check that always silently passes.
