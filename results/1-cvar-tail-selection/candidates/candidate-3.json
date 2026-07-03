@@ -1,0 +1,38 @@
+{
+  "name": "aegis-cvar-candidate-3",
+  "objective": "offline dev-only CVaR selection; official B_dev remains unchanged",
+  "params": {
+    "adapt_step": 0.004222510142249369,
+    "bandwidth_weight": 1.0826229099444644,
+    "drop_threshold": 0.38805947145729097,
+    "edge_penalty": 0.4635597157387505,
+    "latency_weight": 6.0,
+    "learned_penalty": 12.462775797437287,
+    "loop_penalty": 10.510031259716472,
+    "loss_weight": 62.534877141798034,
+    "low_ttl_penalty": 3.390397595928773,
+    "max_budget": 0.5516727146932298,
+    "min_budget": 0.146564373322203,
+    "progress_weight": 6.263590128606361,
+    "reputation_decay": 0.9406272009168221,
+    "reputation_penalty": 1.0551655322574,
+    "risk_budget": 0.16116804869121615,
+    "solver": "edge",
+    "stability_weight": 3.428630625682344,
+    "sybil_threshold": 0.12596260636250523,
+    "window_size": 16
+  },
+  "source_run": "runs/refine_edge_global_v2/stage2_results.csv",
+  "source_candidate_id": 4696,
+  "selection_metrics": {
+    "selection_score": 0.276061821260624,
+    "cvar_score_low40": 0.384677889179307,
+    "cvar_delivery_low40": 0.538963058120866,
+    "cvar_sybil_high40": 0.1332139829048013,
+    "dev_score_mean": 0.4375578070312498,
+    "dev_score_std": 0.050037064927316244,
+    "dev_delivery_mean": 0.5849549025800032,
+    "dev_sybil_mean": 0.1207512434422217,
+    "dev_sybil_max": 0.13366518543197528
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "delivery": 0.5060468464427488,
+  "drop": 0.49395315355725117,
+  "hops": 0.27003988510507576,
+  "latency": 0.27003988510507576,
+  "max_sybil": 0.18546073423423196,
+  "objective": "sybil_stress",
+  "primary_score": 0.42269150871029015,
+  "profile": "profiles/aegis-pheromone-repulsion-v1.json",
+  "scenario_count": 1,
+  "score": 0.42269150871029015,
+  "seed_count": 3,
+  "split": "test",
+  "sybil": 0.18546073423423196
+}

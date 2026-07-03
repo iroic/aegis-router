@@ -1,0 +1,8 @@
+{
+  "node_id": "4",
+  "hypothesis": "Mechanism: Two-profile bandit selector over edge routing policies\nHypothesis: switch between the delivery-heavy and security-heavy edge profiles using recent packet outcomes and local churn/sybil pressure so mixed scenarios can get the best of both behaviors instead of averaging them away.\nObservable: higher robust_score on the fixed dev suite and lower max_sybil on the held-out stress scenario without changing any benchmark code.\nConflicts: none - attacks runtime policy selection rather than per-edge scoring.",
+  "score": 0.6669743086973007,
+  "insight": "Le sélecteur contextuel à deux profils améliore le baseline mais ne dépasse pas le profil sécurité fixe; le coût d'apprentissage et les commutations n'apportent pas de gain robuste sur ce dev fixe.",
+  "result": "B_dev 0.666974, livraison 0.604883, sybil moyen 0.123055, max_sybil 0.141421; inférieur au trunk 0.684530. B_test non exécuté.",
+  "branch": null
+}

@@ -1,0 +1,104 @@
+{
+  "edges": {
+    "12->14": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->6": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->75": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "12->78": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "70->69": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "70->71": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    }
+  },
+  "peers": {
+    "14": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "6": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "69": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "71": {
+      "delivered": 0,
+      "drops": 1,
+      "link_losses": 1,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "75": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    },
+    "78": {
+      "delivered": 0,
+      "drops": 0,
+      "link_losses": 0,
+      "loops": 0,
+      "sybil_touches": 0,
+      "ttl_expired": 0
+    }
+  },
+  "risk_budget": 0.1793488993395137,
+  "version": 2
+}

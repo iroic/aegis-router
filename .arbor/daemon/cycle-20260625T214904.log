@@ -1,0 +1,71 @@
+2026-06-25T19:49:04.911931Z ERROR codex_models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Your authentication token has been invalidated. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.142.0, cf-ray: a1167e50ae7aab52-CDG, auth error: 401, auth error code: token_invalidated
+2026-06-25T19:49:04.924567Z ERROR codex_models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Your authentication token has been invalidated. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.142.0, cf-ray: a1167e50bf73d10d-CDG, auth error: 401, auth error code: token_invalidated
+OpenAI Codex v0.142.0
+--------
+workdir: /home/ghost/projects/aegis-router
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019f0054-2f1d-79b1-97ff-26459200bc31
+--------
+user
+# Aegis Router — autonomous Arbor continuation
+
+Use `$arbor-research-agent` and resume the durable Arbor session
+`aegis-router-20260621` in `/home/ghost/projects/aegis-router`.
+
+Run exactly one complete coordinator cycle, then exit cleanly so the external
+supervisor can enforce pacing and restart the next cycle.
+
+Rules:
+
+- Resume existing state; never restart intake or erase prior experiments.
+- First reconcile stale `running` nodes with their existing reports, files,
+  processes, and metrics.
+- Use B_dev for iteration. Use B_test only once for a candidate that beats the
+  current trunk on B_dev and is ready for merge verification.
+- Never optimize against B_test results.
+- Do not modify protected benchmark scenarios, evaluation scripts, existing
+  tests, seeds, or metric formulas.
+- Preserve existing APIs and keep existing tests green.
+- Implement experiments through isolated executor agents/worktrees when
+  possible.
+- Keep rejected experiments as reports/branches, but remove their candidate
+  code from the active working tree.
+- Never push, force-push, create a pull request, delete branches, or publish
+  externally.
+- Do not install system packages or request interactive input.
+- Prefer lightweight, deterministic, measurable mechanisms.
+- If no pending node exists, inspect constraints, use the strict ideation gate,
+  add 1–3 genuinely new hypotheses, select one, and execute it.
+- Record the completed node, propagate insights, and update the durable report
+  before exiting.
+
+Current validated trunk:
+
+- B_dev: `0.6845301005442892`
+- B_test: `0.42429066273896465`
+- profile: `profiles/aegis-global-edge-v3.json`
+
+Primary objective: improve held-out delivery and robustness while reducing
+Sybil exposure, packet loss, latency, and route length across dynamic
+adversarial networks.
+
+2026-06-25T19:49:05.058240Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when UnexpectedServerResponse("HTTP 401: {\n  \"error\": {\n    \"message\": \"Your authentication token has been invalidated. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"code\": \"token_invalidated\",\n    \"param\": null\n  },\n  \"status\": 401\n}")
+2026-06-25T19:49:05.416524Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-25T19:49:05.567145Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-25T19:49:05.748798Z ERROR codex_login::auth::manager: Failed to refresh token: 401 Unauthorized: {
+  "error": {
+    "message": "Your session has ended. Please log in again.",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": "refresh_token_invalidated"
+  }
+}
+2026-06-25T19:49:05.988446Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-25T19:49:06.194367Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+ERROR: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+ERROR: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.

@@ -1,0 +1,26 @@
+--- /home/ghost/projects/aegis-router/aegis_router/event_sim.py	2026-06-21 22:41:07.398464971 +0200
++++ /tmp/aegis-arbor-node13-slim.XF4a2a/aegis_router/event_sim.py	2026-06-24 18:48:53.894225784 +0200
+@@ -209,6 +209,7 @@
+         metrics = self.graph.metrics(pkt.node, nxt)
+         extra_drop = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
+         effective_loss = min(0.95, metrics.loss + extra_drop)
++        pkt.last_advertised_loss = metrics.loss
+         if self.rng.random() < effective_loss:
+             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
+             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+@@ -238,6 +239,7 @@
+         observer = getattr(self.solver, "observe_result", None)
+         neighbor = getattr(pkt, "last_neighbor", None)
+         from_node = getattr(pkt, "last_from", None)
++        advertised_loss = getattr(pkt, "last_advertised_loss", None)
+         if observer is not None and neighbor is not None:
+             observer(
+                 neighbor=neighbor,
+@@ -246,6 +248,7 @@
+                 touched_sybil=pkt.touched_sybil,
+                 reason=reason,
+                 from_node=from_node,
++                advertised_loss=advertised_loss,
+             )
+ 
+     def _stats(self) -> EventStats:

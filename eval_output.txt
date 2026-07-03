@@ -1,0 +1,18 @@
+Aegis Router v0.3 - event-driven P2P simulation
+nodes=20 duration=3.0s traffic_rate=6.0/s sybil_ratio=0.10 ttl=18 drain=2.0s
+dynamics: sybil_stealth=0.00 congestion_rate=0.00 churn_rate=0.00
+shortest-path : generated=  24 | delivery= 66.7% | drop= 33.3% | inflight=  0 | hops= 1.94 | latency= 0.646 | queue= 0.000 | risk= 0.209 | sybil= 25.0%
+hybrid v0.3   : generated=  25 | delivery= 68.0% | drop= 32.0% | inflight=  0 | hops= 2.41 | latency= 0.858 | queue= 0.003 | risk= 0.214 | sybil= 28.0%
+risk-aware   : generated=  24 | delivery= 58.3% | drop= 41.7% | inflight=  0 | hops= 2.57 | latency= 0.833 | queue= 0.003 | risk= 0.213 | sybil= 25.0%
+adaptive-risk: generated=  24 | delivery= 58.3% | drop= 41.7% | inflight=  0 | hops= 2.57 | latency= 0.833 | queue= 0.003 | risk= 0.214 | sybil= 25.0%
+learned #01  : generated=  20 | delivery= 65.0% | drop= 35.0% | inflight=  0 | hops= 3.38 | latency= 1.108 | queue= 0.001 | risk= 0.198 | sybil= 20.0%
+state file    : eval_state.json
+learn mode    : edge
+drop reasons:
+  shortest-path : link_loss=7, sybil_drop=1
+  hybrid v0.3   : link_loss=7, sybil_drop=1
+  risk-aware    : link_loss=9, sybil_drop=1
+  adaptive-risk : link_loss=9, sybil_drop=1
+  learned last  : link_loss=7
+
+v0.3 ajoute: trafic Poisson, files d'attente, pertes réelles, TTL, paquets comme épisodes asynchrones.

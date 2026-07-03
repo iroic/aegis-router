@@ -1,0 +1,69 @@
+{
+  "benchmark": "B_dev only",
+  "fixed_profile_base": "profiles/aegis-global-edge-v3.json",
+  "selected": "edge-p4-c3-w0001",
+  "trunk_score": 0.6845301005442892,
+  "trials": [
+    {
+      "name": "edge-p4-c3-w05",
+      "evidence_prior_strength": 4.0,
+      "evidence_confidence_scale": 3.0,
+      "evidence_pool_weight": 0.5,
+      "score": 0.6553856466930241,
+      "delivery": 0.5946827761575814,
+      "sybil": 0.12282640649617368,
+      "max_sybil": 0.13596869723014723
+    },
+    {
+      "name": "edge-p4-c3-w0",
+      "evidence_prior_strength": 4.0,
+      "evidence_confidence_scale": 3.0,
+      "evidence_pool_weight": 0.0,
+      "score": 0.6907971754473833,
+      "delivery": 0.6034045291492657,
+      "sybil": 0.12277831843568035,
+      "max_sybil": 0.14005787010731305
+    },
+    {
+      "name": "edge-p2-c1-w0",
+      "evidence_prior_strength": 2.0,
+      "evidence_confidence_scale": 1.0,
+      "evidence_pool_weight": 0.0,
+      "score": 0.6551698665907838,
+      "delivery": 0.5929193448824438,
+      "sybil": 0.12132453245223951,
+      "max_sybil": 0.14780374049357067
+    },
+    {
+      "name": "edge-p4-c3-w005",
+      "evidence_prior_strength": 4.0,
+      "evidence_confidence_scale": 3.0,
+      "evidence_pool_weight": 0.05,
+      "score": 0.6544249932756959,
+      "delivery": 0.5978800645744303,
+      "sybil": 0.12483630798588685,
+      "max_sybil": 0.1368261803161722
+    },
+    {
+      "name": "edge-p4-c4-w0",
+      "evidence_prior_strength": 4.0,
+      "evidence_confidence_scale": 4.0,
+      "evidence_pool_weight": 0.0,
+      "score": 0.6736226512979068,
+      "delivery": 0.6030100578910591,
+      "sybil": 0.12595239150572848,
+      "max_sybil": 0.14589624315858585
+    },
+    {
+      "name": "edge-p4-c3-w0001",
+      "selected": true,
+      "evidence_prior_strength": 4.0,
+      "evidence_confidence_scale": 3.0,
+      "evidence_pool_weight": 0.001,
+      "score": 0.6933176702330417,
+      "delivery": 0.6049261852559059,
+      "sybil": 0.12244518295905275,
+      "max_sybil": 0.13839219272417505
+    }
+  ]
+}

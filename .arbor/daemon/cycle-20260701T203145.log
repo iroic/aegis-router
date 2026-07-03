@@ -1,0 +1,95 @@
+2026-07-01T18:31:46.379351Z ERROR codex_login::auth::manager: Failed to refresh token: 401 Unauthorized: {
+  "error": {
+    "message": "Your session has ended. Please log in again.",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": "refresh_token_invalidated"
+  }
+}
+2026-07-01T18:31:46.379398Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.402286Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.439640Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.534473Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.556684Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.603235Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.647511Z ERROR codex_models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Provided authentication token is expired. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.142.0, cf-ray: a1477d543f5a9ede-CDG, auth error: 401, auth error code: token_expired
+2026-07-01T18:31:46.698085Z ERROR codex_models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Provided authentication token is expired. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.142.0, cf-ray: a1477d547e7100c6-CDG, auth error: 401, auth error code: token_expired
+2026-07-01T18:31:46.722651Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+OpenAI Codex v0.142.0
+--------
+workdir: /home/ghost/projects/aegis-router
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 019f1ef3-910a-72e3-9648-79b52579aa21
+--------
+user
+# Aegis Router — autonomous Arbor continuation
+
+Use `$arbor-research-agent` and resume the durable Arbor session
+`aegis-router-20260621` in `/home/ghost/projects/aegis-router`.
+
+Run exactly one complete coordinator cycle, then exit cleanly so the external
+supervisor can enforce pacing and restart the next cycle.
+
+Rules:
+
+- Resume existing state; never restart intake or erase prior experiments.
+- First reconcile stale `running` nodes with their existing reports, files,
+  processes, and metrics.
+- Use B_dev for iteration. Use B_test only once for a candidate that beats the
+  current trunk on B_dev and is ready for merge verification.
+- Never optimize against B_test results.
+- Do not modify protected benchmark scenarios, evaluation scripts, existing
+  tests, seeds, or metric formulas.
+- Preserve existing APIs and keep existing tests green.
+- Implement experiments through isolated executor agents/worktrees when
+  possible.
+- Keep rejected experiments as reports/branches, but remove their candidate
+  code from the active working tree.
+- Never push, force-push, create a pull request, delete branches, or publish
+  externally.
+- Do not install system packages or request interactive input.
+- Prefer lightweight, deterministic, measurable mechanisms.
+- If no pending node exists, inspect constraints, use the strict ideation gate,
+  add 1–3 genuinely new hypotheses, select one, and execute it.
+- Record the completed node, propagate insights, and update the durable report
+  before exiting.
+
+Current validated trunk:
+
+- B_dev: `0.6845301005442892`
+- B_test: `0.42429066273896465`
+- profile: `profiles/aegis-global-edge-v3.json`
+
+Primary objective: improve held-out delivery and robustness while reducing
+Sybil exposure, packet loss, latency, and route length across dynamic
+adversarial networks.
+
+2026-07-01T18:31:46.820795Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:46.854244Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when UnexpectedServerResponse("HTTP 401: {\n  \"error\": {\n    \"message\": \"Provided authentication token is expired. Please try signing in again.\",\n    \"type\": null,\n    \"code\": \"token_expired\",\n    \"param\": null\n  },\n  \"status\": 401\n}")
+2026-07-01T18:31:46.960899Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.066946Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.088953Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.110540Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.310722Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-07-01T18:31:47.356096Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.377248Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.398844Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.535490Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-07-01T18:31:47.564135Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.589828Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.635330Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.673172Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.694886Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.716642Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.878638Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+2026-07-01T18:31:47.923596Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.945171Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:47.967315Z ERROR codex_login::auth::manager: Failed to refresh token: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+2026-07-01T18:31:48.140462Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 401 Unauthorized, url: wss://chatgpt.com/backend-api/codex/responses
+ERROR: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.
+ERROR: Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.

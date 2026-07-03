@@ -1,0 +1,15 @@
+{
+  "delivery": 0.48904842127602616,
+  "drop": 0.5109515787239739,
+  "hops": 0.2862052644809621,
+  "latency": 0.2862052644809621,
+  "max_sybil": 0.21170029814801336,
+  "objective": "sybil_stress",
+  "primary_score": 0.3405655097363942,
+  "profile": "profiles/aegis-cvar-edge-v1.json",
+  "scenario_count": 1,
+  "score": 0.3405655097363942,
+  "seed_count": 3,
+  "split": "test",
+  "sybil": 0.21170029814801336
+}

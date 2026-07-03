@@ -1,0 +1,8 @@
+{
+  "node_id": "7",
+  "hypothesis": "Mechanism: Concentration-aware route diversification with local structural suspicion\nHypothesis: penalize repeated dependence on the same transit nodes and edges while using only observable local topology and outcome history to spread traffic across structurally independent routes, reducing the chance that one deceptive Sybil hub captures many packets.\nObservable: lower B_dev max_sybil and route concentration without materially increasing hops, latency, or packet loss.\nConflicts: pruned [2] used a latent hazard belief and regressed; this counters via explicit route concentration and observable structural diversity rather than hidden-risk inference.",
+  "score": 0.6870040996217148,
+  "insight": "Light route concentration penalties improved fixed B_dev but regressed held-out high-Sybil delivery; unconditional global usage penalties do not generalize. Future diversification needs a stronger local viability or congestion gate.",
+  "result": "B_dev 0.687004 exceeded trunk 0.684530, but one merge-verification B_test scored 0.387203 below trunk 0.424291; rejected without merge.",
+  "branch": null
+}

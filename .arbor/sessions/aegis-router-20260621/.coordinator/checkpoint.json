@@ -1,0 +1,12 @@
+{
+  "run_name": "aegis-router-20260621",
+  "cycle_number": 13,
+  "phase": "cycle_end",
+  "git_branch": "main",
+  "git_head": "1c9ea3050ccb69de3fc40dde73877d13f9238618",
+  "completed_node": "13",
+  "in_flight_executors": [],
+  "pending_human_gates": [],
+  "exit_reason": "Completed exactly one resumed coordinator cycle; node 13 pruned after B_test verification failed; external supervisor controls pacing.",
+  "updated_at": "2026-06-24T18:51:58+02:00"
+}

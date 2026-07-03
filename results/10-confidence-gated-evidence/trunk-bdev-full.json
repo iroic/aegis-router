@@ -1,0 +1,16 @@
+{
+  "delivery": 0.6034386334033215,
+  "drop": 0.3965613665966785,
+  "hops": 6.1127610281512155,
+  "latency": 1.8677421621665435,
+  "max_sybil": 0.14121545069491892,
+  "objective": "sybil_stress",
+  "primary_score": 0.6845301005442892,
+  "profile": "profiles/aegis-global-edge-v3.json",
+  "risk": 0.2560795343086617,
+  "scenario_count": 5,
+  "score": 0.6845301005442892,
+  "seed_count": 3,
+  "split": "dev",
+  "sybil": 0.12270596925994205
+}

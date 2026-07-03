@@ -1,0 +1,70 @@
+{
+  "benchmark": "B_dev only",
+  "trunk_score": 0.6845301005442892,
+  "trials": [
+    {
+      "name": "aggressive_mixed",
+      "params": {
+        "concentration_decay": 0.997,
+        "node_concentration_penalty": 0.2,
+        "edge_concentration_penalty": 0.35,
+        "structural_suspicion_penalty": 0.05,
+        "concentration_drop_boost": 0.25,
+        "concentration_delivery_relief": 0.02
+      },
+      "score": 0.6648931003694687,
+      "delivery": 0.6014702275658396,
+      "drop": 0.39852977243416043,
+      "sybil": 0.12665128914536627,
+      "max_sybil": 0.1463702253127201
+    },
+    {
+      "name": "light_node_and_edge",
+      "selected": true,
+      "params": {
+        "concentration_decay": 0.9995,
+        "node_concentration_penalty": 0.03,
+        "edge_concentration_penalty": 0.08,
+        "structural_suspicion_penalty": 0.0,
+        "concentration_drop_boost": 0.0,
+        "concentration_delivery_relief": 0.0
+      },
+      "score": 0.6870040996217148,
+      "delivery": 0.6043672163158552,
+      "drop": 0.39563278368414484,
+      "sybil": 0.12432946652153383,
+      "max_sybil": 0.1393671851494942,
+      "risk": 0.25546439910306673,
+      "latency": 1.8405381562057492,
+      "hops": 6.030300008247972
+    },
+    {
+      "name": "edge_only",
+      "params": {
+        "concentration_decay": 0.9995,
+        "node_concentration_penalty": 0.0,
+        "edge_concentration_penalty": 0.08,
+        "structural_suspicion_penalty": 0.0
+      },
+      "score": 0.6808768487011951,
+      "delivery": 0.6006985008929293,
+      "drop": 0.3993014991070707,
+      "sybil": 0.12188746553268474,
+      "max_sybil": 0.1563933704178885
+    },
+    {
+      "name": "weaker_edge",
+      "params": {
+        "concentration_decay": 0.9995,
+        "node_concentration_penalty": 0.03,
+        "edge_concentration_penalty": 0.04,
+        "structural_suspicion_penalty": 0.0
+      },
+      "score": 0.6673261429732787,
+      "delivery": 0.597711798724828,
+      "drop": 0.40228820127517184,
+      "sybil": 0.12485006855138192,
+      "max_sybil": 0.16064522537836104
+    }
+  ]
+}

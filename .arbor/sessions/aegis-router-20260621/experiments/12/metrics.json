@@ -1,0 +1,8 @@
+{
+  "node_id": "12",
+  "hypothesis": "Mechanism: Local bridge-risk prior from neighbor topology before feedback learning\nHypothesis: Penalizing candidate next hops that concentrate traffic through low-redundancy, high-loss neighborhoods should reduce early Sybil gateway contacts without globally suppressing useful routes.\nObservable: B_dev robust_score exceeds 0.684530 while mean/max Sybil exposure falls without a material delivery regression.\nConflicts: pruned [7] used unconditional route concentration penalties and pruned [9] over-suppressed useful routes; this counters via per-decision structural gateway risk gated by local redundancy.",
+  "score": 0.6719332010858522,
+  "insight": "Topology-only local bridge-risk prior reduced Sybil exposure but was still too blunt: delivery fell enough that robust B_dev stayed below trunk. Future structural signals should be conditional on packet pressure or learned outcomes.",
+  "result": "Failed to beat trunk on B_dev: 0.6719332010858522 versus trunk 0.6845301005442892; no B_test run.",
+  "branch": "/tmp/aegis-arbor-node12-slim.NBHzWN"
+}

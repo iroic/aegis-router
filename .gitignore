@@ -9,3 +9,9 @@ dist/
 aegis_state.json
 .venv311/
 runs/
+.arbor/
+eval_state.json
+.autoresearch/
+.coordinator/
+results/
+cache_old_*/

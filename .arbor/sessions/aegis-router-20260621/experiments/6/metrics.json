@@ -1,0 +1,8 @@
+{
+  "node_id": "6",
+  "hypothesis": "Mechanism: Adversarial domain-randomized learning curriculum\nHypothesis: train persistent edge memory across procedurally varied Sybil ratios, stealth, churn, congestion, graph sizes, and densities before evaluation so the learned state represents invariant risk signals rather than the five fixed dev regimes.\nObservable: maintain or improve B_dev robust_score while reducing variance across dev scenarios and avoiding the high-pressure collapse seen in prior held-out checks.\nConflicts: pruned [1] overfit fixed dev scenario ranking; this counters it through broader training distributions while leaving the official benchmark and protected test untouched.",
+  "score": 0.674405,
+  "insight": "La randomisation de domaine apporte un vrai transfert et réduit fortement l'exposition Sybil par rapport à son contrôle, mais les statistiques contextuelles restent trop grossières et réduisent la livraison.",
+  "result": "B_dev 0.674405, inférieur au trunk 0.684530; amélioration de 0.031641 face au contrôle; B_test non exécuté.",
+  "branch": "coordinator/n6-mechanism-adversarial-domain-ran-0a7b855f"
+}

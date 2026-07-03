@@ -1,0 +1,146 @@
+--- /home/ghost/projects/aegis-router/aegis_router/solvers.py	2026-06-22 00:27:09.191581050 +0200
++++ /tmp/aegis-arbor-node13-slim.XF4a2a/aegis_router/solvers.py	2026-06-24 18:49:41.786954311 +0200
+@@ -76,6 +76,7 @@
+         touched_sybil: bool = False,
+         reason: str | None = None,
+         from_node: NodeId | None = None,
++        advertised_loss: float | None = None,
+     ) -> None:
+         old = self.peer_risk[neighbor] * self.reputation_decay
+         signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
+@@ -126,8 +127,9 @@
+         touched_sybil: bool = False,
+         reason: str | None = None,
+         from_node: NodeId | None = None,
++        advertised_loss: float | None = None,
+     ) -> None:
+-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
++        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node, advertised_loss=advertised_loss)
+         self._recent_drops.append(dropped)
+         self._recent_sybil.append(touched_sybil)
+         if len(self._recent_drops) < self.window_size:
+@@ -148,6 +150,8 @@
+     link_losses: int = 0
+     loops: int = 0
+     ttl_expired: int = 0
++    surprise_adverse: float = 0.0
++    delivery_relief: float = 0.0
+ 
+     @property
+     def badness(self) -> float:
+@@ -206,8 +210,9 @@
+         touched_sybil: bool = False,
+         reason: str | None = None,
+         from_node: NodeId | None = None,
++        advertised_loss: float | None = None,
+     ) -> None:
+-        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node)
++        super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node, advertised_loss=advertised_loss)
+         score = self.peer_scores[neighbor]
+         if delivered:
+             score.delivered += 1
+@@ -239,8 +244,52 @@
+     """
+ 
+     edge_penalty: float = 0.7
++    surprise_gated_feedback: bool = True
++    surprise_min_weight: float = 0.12
++    surprise_sybil_boost: float = 0.45
++    surprise_delivery_relief: float = 0.42
+     edge_scores: defaultdict[EdgeKey, PeerScore] = field(default_factory=lambda: defaultdict(PeerScore))
+ 
++    def _surprise_weight(
++        self,
++        score: PeerScore,
++        *,
++        touched_sybil: bool,
++        reason: str | None,
++        advertised_loss: float | None,
++    ) -> float:
++        if not self.surprise_gated_feedback:
++            return 1.0
++        loss = 0.0 if advertised_loss is None else max(0.0, min(0.95, advertised_loss))
++        expected_weight = max(self.surprise_min_weight, 1.0 - (loss / 0.55))
++        total = score.delivered + score.drops
++        reliable_context = score.delivered / max(1, total)
++        weight = expected_weight * (1.0 - self.surprise_delivery_relief * reliable_context)
++        if touched_sybil or reason == "sybil_drop":
++            weight += self.surprise_sybil_boost
++        if reason in {"loop", "ttl_expired"}:
++            weight *= 0.55
++        return max(self.surprise_min_weight, min(1.8, weight))
++
++    def _delivery_relief(self, advertised_loss: float | None) -> float:
++        if not self.surprise_gated_feedback:
++            return 0.0
++        loss = 0.0 if advertised_loss is None else max(0.0, min(0.95, advertised_loss))
++        return 0.15 + (0.35 * (1.0 - loss))
++
++    def _gated_badness(self, score: PeerScore) -> float:
++        if not self.surprise_gated_feedback:
++            return score.badness
++        total = max(1, score.delivered + score.drops)
++        adverse = max(0.0, score.surprise_adverse - score.delivery_relief)
++        return (
++            (adverse / total)
++            + 0.35 * (score.sybil_touches / total)
++            + 0.20 * (score.link_losses / total)
++            + 0.30 * (score.loops / total)
++            + 0.15 * (score.ttl_expired / total)
++        )
++
+     def load(self) -> None:
+         if not Path(self.state_path).exists():
+             return
+@@ -273,6 +322,7 @@
+         touched_sybil: bool = False,
+         reason: str | None = None,
+         from_node: NodeId | None = None,
++        advertised_loss: float | None = None,
+     ) -> None:
+         super().observe_result(
+             neighbor=neighbor,
+@@ -281,14 +331,32 @@
+             touched_sybil=touched_sybil,
+             reason=reason,
+             from_node=from_node,
++            advertised_loss=advertised_loss,
+         )
++        peer_score = self.peer_scores[neighbor]
++        if delivered:
++            peer_score.delivery_relief += self._delivery_relief(advertised_loss)
++        if dropped:
++            peer_score.surprise_adverse += self._surprise_weight(
++                peer_score,
++                touched_sybil=touched_sybil,
++                reason=reason,
++                advertised_loss=advertised_loss,
++            )
+         if from_node is None:
+             return
+         score = self.edge_scores[(from_node, neighbor)]
+         if delivered:
+             score.delivered += 1
++            score.delivery_relief += self._delivery_relief(advertised_loss)
+         if dropped:
+             score.drops += 1
++            score.surprise_adverse += self._surprise_weight(
++                score,
++                touched_sybil=touched_sybil,
++                reason=reason,
++                advertised_loss=advertised_loss,
++            )
+         if touched_sybil:
+             score.sybil_touches += 1
+         if reason == "link_loss":
+@@ -300,8 +368,8 @@
+ 
+     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
+         assert packet.node is not None
+-        edge_badness = self.edge_scores[(packet.node, nb)].badness
+-        return super()._score(graph, packet, nb) - (self.edge_penalty * edge_badness)
++        edge_badness = self._gated_badness(self.edge_scores[(packet.node, nb)])
++        return PersistentLearningSolver._score(self, graph, packet, nb) - (self.edge_penalty * edge_badness)
+ 
+ 
+ @dataclass
