@@ -80,15 +80,25 @@ class ClusterStats:
     delivered: list[Packet] = field(default_factory=list)
     dropped: Counter = field(default_factory=Counter)
     retransmissions: int = 0
+    # Packets that touched >=1 sybil node at any point, delivered or not --
+    # not the same as sybil_drop count, which only counts packets killed
+    # AT a sybil hop. A packet can touch a sybil and still succeed, or fail
+    # later for an unrelated reason; this is the security-relevant exposure
+    # metric (matches EventStats.sybil_touch_ratio in event_sim.py).
+    sybil_touched: int = 0
 
     def record_generated(self) -> None:
         self.generated += 1
 
     def record_delivery(self, pkt: Packet) -> None:
         self.delivered.append(pkt)
+        if pkt.touched_sybil:
+            self.sybil_touched += 1
 
-    def record_drop(self, reason: str) -> None:
+    def record_drop(self, reason: str, pkt: Packet | None = None) -> None:
         self.dropped[reason] += 1
+        if pkt is not None and pkt.touched_sybil:
+            self.sybil_touched += 1
 
     def record_retransmissions(self, n: int) -> None:
         self.retransmissions += n
@@ -96,6 +106,10 @@ class ClusterStats:
     @property
     def delivery_ratio(self) -> float:
         return len(self.delivered) / max(1, self.generated)
+
+    @property
+    def sybil_touch_ratio(self) -> float:
+        return self.sybil_touched / max(1, self.generated)
 
     def summary(self) -> dict:
         n = len(self.delivered)
@@ -107,6 +121,7 @@ class ClusterStats:
             "avg_hops": mean(p.hops for p in self.delivered) if n else None,
             "avg_latency": mean(p.latency for p in self.delivered) if n else None,
             "retransmissions": self.retransmissions,
+            "sybil_touch_ratio": self.sybil_touch_ratio,
         }
 
 
@@ -159,21 +174,21 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         pkt.node = self.node_id
         if pkt.node == pkt.dst:
             if not verify_packet(pkt, self.pubkeys[pkt.src]):
-                self.stats.record_drop("bad_signature")
+                self.stats.record_drop("bad_signature", pkt)
                 return
             pkt.latency = time.monotonic() - pkt.created_at
             self.stats.record_delivery(pkt)
             return
         if pkt.node in pkt.visited:
-            self.stats.record_drop("loop")
+            self.stats.record_drop("loop", pkt)
             return
         if pkt.ttl <= 0:
-            self.stats.record_drop("ttl_expired")
+            self.stats.record_drop("ttl_expired", pkt)
             return
         pkt.visited.add(pkt.node)
         nxt = self.solver.next_hop(self.graph, pkt)
         if nxt is None or nxt not in self.graph.adj.get(pkt.node, {}):
-            self.stats.record_drop("no_route")
+            self.stats.record_drop("no_route", pkt)
             return
         self._forward(pkt, nxt)
 
@@ -199,11 +214,14 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         transmissions = failed_tries + (1 if success else 0)
         self.stats.record_retransmissions(max(0, transmissions - 1))
         self._observe_own_link(nxt, success=success)
+        # Set before the outcome branch: a packet dropped BY a sybil hop
+        # must still count as sybil-touched (a prior bug here only updated
+        # this on the success path, undercounting real exposure).
+        pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
         if not success:
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
-            self.stats.record_drop(reason)
+            self.stats.record_drop(reason, pkt)
             return
-        pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
         pkt.last_from = pkt.node
         pkt.last_neighbor = nxt
         pkt.hops += 1

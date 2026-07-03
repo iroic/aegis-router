@@ -64,6 +64,19 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(with_arq.retransmissions, 0)
         self.assertGreaterEqual(with_arq.delivery_ratio, baseline.delivery_ratio)
 
+    def test_sybil_touch_ratio_counts_packets_dropped_by_a_sybil(self):
+        # Regression guard: touched_sybil must be set BEFORE the drop branch
+        # in _forward, not only on the success path -- a packet killed by a
+        # sybil hop is the clearest possible case of "touched a sybil".
+        stats = asyncio.run(run_local_cluster(
+            nodes=20, degree=4, sybil_ratio=0.3, sybil_extra_drop=0.9,
+            duration=3.0, drain=1.5, traffic_rate=8.0, ttl=12,
+            solver_name="shortest", seed=404, base_port=19460,
+        ))
+        self.assertGreater(stats.dropped.get("sybil_drop", 0), 0)
+        self.assertGreaterEqual(stats.sybil_touched, stats.dropped["sybil_drop"])
+        self.assertGreater(stats.sybil_touch_ratio, 0.0)
+
     def test_tampered_signature_is_actually_rejected(self):
         # Negative control: proves verify_packet's rejection path is live,
         # not a check that always silently passes.
