@@ -46,6 +46,7 @@ async def _run_seed(args, topo_seed: int, base_port: int) -> dict:
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
         sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
+        redundancy=args.redundancy,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, seed=topo_seed,
@@ -85,7 +86,7 @@ async def main_async(args) -> None:
           f"{args.learn_runs} learn run(s)/seed ===")
     print(f"sybil_ratio={args.sybil_ratio} sybil_stealth={args.sybil_stealth} "
           f"churn_rate={args.churn_rate} congestion_rate={args.congestion_rate} "
-          f"link_retries={args.link_retries} duration={args.duration}s drain={args.drain}s\n")
+          f"link_retries={args.link_retries} redundancy={args.redundancy} duration={args.duration}s drain={args.drain}s\n")
 
     all_results = []
     t_start = time.monotonic()
@@ -122,6 +123,7 @@ def main() -> None:
     p.add_argument("--traffic-rate", type=float, default=12.0)
     p.add_argument("--ttl", type=int, default=16)
     p.add_argument("--link-retries", type=int, default=0)
+    p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: disjoint-first-hop copies per packet")
     p.add_argument("--churn-rate", type=float, default=0.0)
     p.add_argument("--churn-recovery", type=float, default=0.4)
     p.add_argument("--congestion-rate", type=float, default=0.0)
