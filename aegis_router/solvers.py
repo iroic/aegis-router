@@ -55,7 +55,7 @@ class RiskAwareHybridSolver:
 
     def next_hop(self, graph: P2PGraph, packet: Packet) -> NodeId | None:
         assert packet.node is not None
-        neighbors = graph.neighbors(packet.node)
+        neighbors = graph.reachable_neighbors(packet.node)
         if not neighbors:
             return None
         viable = []
@@ -301,21 +301,26 @@ class EdgeLearningSolver(PersistentLearningSolver):
         """
         if packet.node is None or packet.ttl < 2:
             return None
-        
+
         current = packet.node
         dest = packet.dst
-        
+
+        # An offline destination cannot accept a connection regardless of path.
+        if dest in graph.offline_nodes:
+            return None
+
         # Directly return destination if it's a neighbor
         if graph.has_edge(current, dest):
             return [current, dest]
-        
+
         # Find trusted intermediaries using reputation scores
         candidates = []
-        
+
         # 2-hop paths
         for n1 in graph.neighbors(current):
-            if (n1 in packet.visited or 
-                self.peer_risk[n1] > self.NODE_RISK_THRESHOLD or 
+            if (n1 in packet.visited or
+                n1 in graph.offline_nodes or
+                self.peer_risk[n1] > self.NODE_RISK_THRESHOLD or
                 not graph.has_edge(n1, dest)):
                 continue
                 
@@ -335,15 +340,17 @@ class EdgeLearningSolver(PersistentLearningSolver):
         
         # 3-hop paths
         for n1 in graph.neighbors(current):
-            if (n1 in packet.visited or 
+            if (n1 in packet.visited or
+                n1 in graph.offline_nodes or
                 self.peer_risk[n1] > self.NODE_RISK_THRESHOLD):
                 continue
-                
+
             edge1 = (current, n1)
-            
+
             for n2 in graph.neighbors(n1):
-                if (n2 == current or n2 in packet.visited or 
-                    self.peer_risk[n2] > self.NODE_RISK_THRESHOLD or 
+                if (n2 == current or n2 in packet.visited or
+                    n2 in graph.offline_nodes or
+                    self.peer_risk[n2] > self.NODE_RISK_THRESHOLD or
                     not graph.has_edge(n2, dest)):
                     continue
                 

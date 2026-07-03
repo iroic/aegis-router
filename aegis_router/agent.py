@@ -45,7 +45,7 @@ class QRoutingAgent:
         )
 
     def choose(self, graph: P2PGraph, node: NodeId, dst: NodeId, *, train: bool = True, visited: set[NodeId] | None = None) -> NodeId | None:
-        neighbors = graph.neighbors(node)
+        neighbors = graph.reachable_neighbors(node)
         if not neighbors:
             return None
         if visited:
@@ -105,7 +105,7 @@ class HybridRoutingScorer:
         visited: set[NodeId],
         ttl_remaining: int,
     ) -> NodeId | None:
-        neighbors = graph.neighbors(node)
+        neighbors = graph.reachable_neighbors(node)
         if not neighbors:
             return None
         return max(
