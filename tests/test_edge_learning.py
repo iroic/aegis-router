@@ -19,8 +19,9 @@ class EdgeLearningTests(unittest.TestCase):
             loaded = EdgeLearningSolver(state_path=f"{td}/state.json")
 
             self.assertGreater(loaded.edge_scores[(0, 7)].badness, loaded.edge_scores[(3, 7)].badness)
-            self.assertEqual(loaded.edge_scores[(0, 7)].link_losses, 1)
-            self.assertEqual(loaded.edge_scores[(3, 7)].delivered, 1)
+            # Reload counts as a new run, so counters are aged by state_decay.
+            self.assertAlmostEqual(loaded.edge_scores[(0, 7)].link_losses, loaded.state_decay)
+            self.assertAlmostEqual(loaded.edge_scores[(3, 7)].delivered, loaded.state_decay)
 
     def test_solver_avoids_bad_edge_without_banning_neighbor_globally(self):
         graph = P2PGraph()

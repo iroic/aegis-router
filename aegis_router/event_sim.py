@@ -243,7 +243,10 @@ class EventDrivenSimulator:
                 neighbor=neighbor,
                 delivered=delivered,
                 dropped=dropped,
-                touched_sybil=pkt.touched_sybil,
+                # Blame the sybil touch only on the hop where it happened.
+                # pkt.touched_sybil is path-cumulative: passing it here poisons
+                # the reputation of honest hops that merely came after a sybil.
+                touched_sybil=(reason == "sybil_drop"),
                 reason=reason,
                 from_node=from_node,
             )
