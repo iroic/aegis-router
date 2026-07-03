@@ -78,7 +78,17 @@ class RiskAwareHybridSolver:
         from_node: NodeId | None = None,
     ) -> None:
         old = self.peer_risk[neighbor] * self.reputation_decay
-        signal = 1.0 if dropped else (-0.15 if delivered else 0.0)
+        if reason == "node_down":
+            # Transient churn, not misbehaviour: a mild, fast-forgotten signal
+            # so we avoid retrying an already-known-down node this run, but it
+            # does not accumulate into lasting distrust.
+            signal = 0.15
+        elif dropped:
+            signal = 1.0
+        elif delivered:
+            signal = -0.15
+        else:
+            signal = 0.0
         self.peer_risk[neighbor] = max(0.0, min(1.0, old + signal))
 
     def _score(self, graph: P2PGraph, packet: Packet, nb: NodeId) -> float:
@@ -146,6 +156,14 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
 BADNESS_CONFIDENCE_PRIOR = 8.0
 
 
+# node_down (churn) is transient network state, not a property of the peer:
+# the node is very likely back up by the next run. Weighting it like a real
+# drop lets churn alone convict most of the network (measured at 1000 nodes,
+# churn=0.04: learned solver fell to 22% delivery vs 52% for shortest-path,
+# almost entirely from node_down drops accumulating as if they were malice).
+NODE_DOWN_WEIGHT = 0.05
+
+
 @dataclass
 class PeerScore:
     delivered: float = 0.0
@@ -154,6 +172,7 @@ class PeerScore:
     link_losses: float = 0.0
     loops: float = 0.0
     ttl_expired: float = 0.0
+    node_down: float = 0.0
 
     @property
     def badness(self) -> float:
@@ -164,6 +183,7 @@ class PeerScore:
             + 0.35 * self.link_losses
             + 0.5 * self.loops
             + 0.25 * self.ttl_expired
+            + NODE_DOWN_WEIGHT * self.node_down
         )
         return min(1.0, weighted / (total + BADNESS_CONFIDENCE_PRIOR))
 
@@ -174,6 +194,7 @@ class PeerScore:
         self.link_losses *= factor
         self.loops *= factor
         self.ttl_expired *= factor
+        self.node_down *= factor
 
 
 @dataclass
@@ -230,7 +251,9 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
         score = self.peer_scores[neighbor]
         if delivered:
             score.delivered += 1
-        if dropped:
+        if reason == "node_down":
+            score.node_down += 1
+        elif dropped:
             score.drops += 1
         if touched_sybil:
             score.sybil_touches += 1
@@ -412,7 +435,9 @@ class EdgeLearningSolver(PersistentLearningSolver):
         score = self.edge_scores[(from_node, neighbor)]
         if delivered:
             score.delivered += 1
-        if dropped:
+        if reason == "node_down":
+            score.node_down += 1
+        elif dropped:
             score.drops += 1
         if touched_sybil:
             score.sybil_touches += 1
