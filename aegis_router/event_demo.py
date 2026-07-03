@@ -48,6 +48,7 @@ def main() -> None:
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
     p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
     p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
+    p.add_argument("--landmarks", type=int, default=None, help="override landmark count (default: auto-scaled with network size, 0 disables)")
     args = p.parse_args()
 
     def make_sim(solver, seed: int) -> EventDrivenSimulator:
@@ -58,6 +59,7 @@ def main() -> None:
             degree=5,
             sybil_ratio=args.sybil_ratio,
             sybil_stealth=args.sybil_stealth,
+            landmarks=args.landmarks,
             seed=args.seed,
         )
         return EventDrivenSimulator(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 import heapq
+import math
 import random
 from typing import Dict, Iterable, List, Tuple
 
@@ -154,10 +155,11 @@ def generate_random_graph(
     degree: int = 4,
     sybil_ratio: float = 0.1,
     sybil_stealth: float = 0.0,
-    # 24 landmarks: fewer leaves distance-estimate plateaus that lengthen
-    # routes (measured: 8 landmarks fail two scenario tests, 24 pass with
-    # margin and give the best learned delivery/hops on the 3-seed harness).
-    landmarks: int = 24,
+    # None: auto-scale with network size (see _default_landmark_count). A
+    # fixed constant does not transfer across scales — 24 landmarks (tuned
+    # on 80-node graphs) nearly doubled hop count at 1000 nodes; 0 disables
+    # landmarks entirely (falls back to the legacy ring-distance hint).
+    landmarks: int | None = None,
     seed: int | None = None,
 ) -> P2PGraph:
     """Build a random P2P graph.
@@ -191,9 +193,22 @@ def generate_random_graph(
         if b not in g.adj[a]:
             _add_random_edge(g, a, b, rng, stealth)
         attempts += 1
+    if landmarks is None:
+        landmarks = _default_landmark_count(nodes)
     if landmarks > 0:
         g.compute_landmarks(landmarks, seed=seed)
     return g
+
+
+def _default_landmark_count(nodes: int) -> int:
+    """Landmark count that keeps route-quality roughly scale-invariant.
+
+    Grid-tuned at 24 for 80-node graphs (~2.7 * sqrt(80)); measured at 1000
+    nodes that 24 landmarks nearly doubles hop count vs 100 (~3.2 * sqrt(1000)).
+    Scaling by sqrt(nodes) tracks both points; clamped to bound BFS cost on
+    very large graphs and keep a floor on tiny ones.
+    """
+    return max(8, min(200, round(3.0 * math.sqrt(nodes))))
 
 
 # Advertised-metric bounds (min, max) for honest and obvious-Sybil links.
