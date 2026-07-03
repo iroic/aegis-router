@@ -2,13 +2,25 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 import tempfile
 import unittest
 from pathlib import Path
 
-from aegis_router.daemon import ClusterStats, run_local_cluster
+from aegis_router.daemon import ClusterStats, _perturb_loop, run_local_cluster
+from aegis_router.graph import generate_random_graph
 from aegis_router.packet import Packet
 from aegis_router.postquantum_crypto import PostQuantumIdentity, sign_packet, verify_packet
+
+
+async def _run_perturb_briefly(graph, node_ids, **kwargs):
+    task = asyncio.create_task(_perturb_loop(graph, node_ids, **kwargs))
+    await asyncio.sleep(0.12)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 class DaemonLocalClusterTests(unittest.TestCase):
@@ -76,6 +88,39 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(stats.dropped.get("sybil_drop", 0), 0)
         self.assertGreaterEqual(stats.sybil_touched, stats.dropped["sybil_drop"])
         self.assertGreater(stats.sybil_touch_ratio, 0.0)
+
+    def test_churn_flips_nodes_offline(self):
+        graph = generate_random_graph(nodes=10, degree=3, sybil_ratio=0.0, seed=1)
+        asyncio.run(_run_perturb_briefly(
+            graph, graph.nodes(), perturb_interval=0.02,
+            congestion_rate=0.0, congestion_jitter=0.0,
+            churn_rate=1.0, churn_recovery=0.0, rng=random.Random(1),
+        ))
+        # churn_rate=1.0, recovery=0.0: every node flips down on its first
+        # tick and never recovers.
+        self.assertEqual(len(graph.offline_nodes), 10)
+
+    def test_congestion_drifts_link_metrics(self):
+        graph = generate_random_graph(nodes=10, degree=3, sybil_ratio=0.0, seed=2)
+        original = {(a, b): graph.metrics(a, b) for a in graph.adj for b in graph.adj[a] if a < b}
+        asyncio.run(_run_perturb_briefly(
+            graph, graph.nodes(), perturb_interval=0.02,
+            congestion_rate=1.0, congestion_jitter=0.3,
+            churn_rate=0.0, churn_recovery=0.0, rng=random.Random(2),
+        ))
+        changed = sum(1 for (a, b), m in original.items() if graph.metrics(a, b) != m)
+        self.assertGreater(changed, 0)
+
+    def test_real_sockets_produce_node_down_drops_under_churn(self):
+        # End-to-end: churn must actually reach the real forwarding path,
+        # not just mutate graph.offline_nodes in isolation.
+        stats = asyncio.run(run_local_cluster(
+            nodes=15, degree=4, sybil_ratio=0.1, duration=4.0, drain=2.0,
+            traffic_rate=6.0, ttl=12, solver_name="shortest", seed=505,
+            base_port=19500, churn_rate=0.3, churn_recovery=0.3, perturb_interval=0.2,
+        ))
+        self.assertGreater(stats.generated, 0)
+        self.assertIn("node_down", stats.dropped)
 
     def test_tampered_signature_is_actually_rejected(self):
         # Negative control: proves verify_packet's rejection path is live,

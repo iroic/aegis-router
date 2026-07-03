@@ -24,13 +24,17 @@ import time
 from dataclasses import dataclass, field
 from statistics import mean
 
-from .graph import NodeId, P2PGraph, generate_random_graph
+from .graph import LinkMetrics, NodeId, P2PGraph, generate_random_graph
 from .packet import Packet
 from .postquantum_crypto import PostQuantumIdentity, sign_packet, verify_packet
-from .solvers import EdgeLearningSolver, RoutingSolver, ShortestPathSolver
+from .solvers import AdaptiveRiskSolver, EdgeLearningSolver, RiskAwareHybridSolver, RoutingSolver, ShortestPathSolver
 
 Registry = dict[NodeId, tuple[str, int]]
 PubkeyRegistry = dict[NodeId, bytes]
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
 
 
 def packet_to_wire(pkt: Packet) -> dict:
@@ -179,6 +183,12 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
             pkt.latency = time.monotonic() - pkt.created_at
             self.stats.record_delivery(pkt)
             return
+        # Arrived at a node that has since churned offline. The hop that
+        # delivered us here made a decision that was correct at the time;
+        # not its fault, so no observe_result call (matches event_sim.py).
+        if self.node_id in self.graph.offline_nodes:
+            self.stats.record_drop("node_down", pkt)
+            return
         if pkt.node in pkt.visited:
             self.stats.record_drop("loop", pkt)
             return
@@ -193,6 +203,15 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self._forward(pkt, nxt)
 
     def _forward(self, pkt: Packet, nxt: NodeId) -> None:
+        # The solver decided on `nxt` from a snapshot of graph.offline_nodes
+        # that can already be stale (chosen just before a churn tick, or the
+        # only reachable candidate went down in the gap between decision and
+        # send). Attribute this to the hop, unlike the arrival-side check,
+        # matching event_sim.py's distinction between the two cases.
+        if nxt in self.graph.offline_nodes:
+            self._observe_own_link(nxt, success=False, reason="node_down")
+            self.stats.record_drop("node_down", pkt)
+            return
         m = self.graph.metrics(pkt.node, nxt)
         extra = self.sybil_extra_drop if nxt in self.graph.sybil_nodes else 0.0
         effective_loss = min(0.95, m.loss + extra)
@@ -234,7 +253,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         delay = m.latency * (1 + failed_tries)
         self.loop.call_later(delay, self._send_now, payload, nxt)
 
-    def _observe_own_link(self, nxt: NodeId, *, success: bool) -> None:
+    def _observe_own_link(self, nxt: NodeId, *, success: bool, reason: str | None = None) -> None:
         """Feed the local solver's reputation learner from THIS hop's own
         outcome, not the packet's eventual end-to-end fate.
 
@@ -250,12 +269,14 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         observer = getattr(self.solver, "observe_result", None)
         if observer is None:
             return
+        if reason is None and not success:
+            reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
         observer(
             neighbor=nxt,
             delivered=success,
             dropped=not success,
             touched_sybil=nxt in self.graph.sybil_nodes,
-            reason=None if success else ("sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"),
+            reason=reason,
             from_node=self.node_id,
         )
 
@@ -274,9 +295,53 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
 def _make_solver(name: str, *, seed: int) -> RoutingSolver:
     if name == "shortest":
         return ShortestPathSolver()
+    if name == "risk-aware":
+        return RiskAwareHybridSolver()
+    if name == "adaptive-risk":
+        return AdaptiveRiskSolver()
     if name == "edge":
         return EdgeLearningSolver(state_path=f"/tmp/aegis_daemon_node_state_{seed}.json", edge_penalty=1.0, risk_budget=0.35)
     raise ValueError(f"unknown solver: {name}")
+
+
+async def _perturb_loop(
+    graph: P2PGraph,
+    node_ids: list[NodeId],
+    *,
+    perturb_interval: float,
+    congestion_rate: float,
+    congestion_jitter: float,
+    churn_rate: float,
+    churn_recovery: float,
+    rng: random.Random,
+) -> None:
+    """Periodic real-time network dynamics, ported from event_sim.py's
+    _handle_perturb: congestion drift on a sample of edges, and node churn
+    via the same graph.offline_nodes set every solver already respects.
+    Runs for the lifetime of the cluster; cancelled by the caller.
+    """
+    edges = [(a, b) for a in graph.adj for b in graph.adj[a] if a < b]
+    while True:
+        await asyncio.sleep(perturb_interval)
+        if congestion_rate > 0.0 and edges:
+            k = max(1, int(congestion_rate * len(edges)))
+            for a, b in rng.sample(edges, min(k, len(edges))):
+                m = graph.metrics(a, b)
+                j = congestion_jitter
+                drifted = LinkMetrics(
+                    latency=_clamp(m.latency + rng.uniform(-j, j), 0.02, 1.5),
+                    bandwidth=_clamp(m.bandwidth + rng.uniform(-j, j), 0.05, 1.0),
+                    loss=_clamp(m.loss + rng.uniform(-j, j), 0.0, 0.7),
+                    stability=_clamp(m.stability + rng.uniform(-j, j), 0.05, 1.0),
+                )
+                graph.add_edge(a, b, drifted)
+        if churn_rate > 0.0:
+            for node in node_ids:
+                if node in graph.offline_nodes:
+                    if rng.random() < churn_recovery:
+                        graph.offline_nodes.discard(node)
+                elif rng.random() < churn_rate:
+                    graph.offline_nodes.add(node)
 
 
 async def run_local_cluster(
@@ -284,17 +349,23 @@ async def run_local_cluster(
     nodes: int = 8,
     degree: int = 3,
     sybil_ratio: float = 0.2,
+    sybil_stealth: float = 0.0,
     duration: float = 5.0,
     drain: float = 2.0,
     traffic_rate: float = 3.0,
     ttl: int = 12,
     sybil_extra_drop: float = 0.12,
     link_retries: int = 0,
+    churn_rate: float = 0.0,
+    churn_recovery: float = 0.4,
+    congestion_rate: float = 0.0,
+    congestion_jitter: float = 0.15,
+    perturb_interval: float = 0.5,
     solver_name: str = "edge",
     seed: int = 7,
     base_port: int = 19000,
 ) -> ClusterStats:
-    graph = generate_random_graph(nodes=nodes, degree=degree, sybil_ratio=sybil_ratio, seed=seed)
+    graph = generate_random_graph(nodes=nodes, degree=degree, sybil_ratio=sybil_ratio, sybil_stealth=sybil_stealth, seed=seed)
     node_ids = graph.nodes()
     registry: Registry = {n: ("127.0.0.1", base_port + n) for n in node_ids}
     identities = {n: PostQuantumIdentity.generate() for n in node_ids}
@@ -315,6 +386,15 @@ async def run_local_cluster(
         protocols[n] = protocol
         transports.append(transport)
 
+    perturb_task: asyncio.Task | None = None
+    if churn_rate > 0.0 or congestion_rate > 0.0:
+        perturb_task = asyncio.create_task(_perturb_loop(
+            graph, node_ids, perturb_interval=perturb_interval,
+            congestion_rate=congestion_rate, congestion_jitter=congestion_jitter,
+            churn_rate=churn_rate, churn_recovery=churn_recovery,
+            rng=random.Random(seed + 500),
+        ))
+
     packet_ids = itertools.count()
     end_time = loop.time() + duration
     try:
@@ -325,6 +405,12 @@ async def run_local_cluster(
             await asyncio.sleep(rng.expovariate(traffic_rate))
         await asyncio.sleep(drain)
     finally:
+        if perturb_task is not None:
+            perturb_task.cancel()
+            try:
+                await perturb_task
+            except asyncio.CancelledError:
+                pass
         for t in transports:
             t.close()
         # transport.close() schedules the underlying socket close on the
@@ -348,20 +434,29 @@ def main() -> None:
     p.add_argument("--nodes", type=int, default=8)
     p.add_argument("--degree", type=int, default=3)
     p.add_argument("--sybil-ratio", type=float, default=0.2)
+    p.add_argument("--sybil-stealth", type=float, default=0.0, help="0=obvious sybil links, 1=sybil links advertise honest-looking metrics")
     p.add_argument("--duration", type=float, default=5.0)
     p.add_argument("--drain", type=float, default=2.0)
     p.add_argument("--traffic-rate", type=float, default=3.0)
     p.add_argument("--ttl", type=int, default=12)
     p.add_argument("--link-retries", type=int, default=0, help="hop-by-hop ARQ: retransmissions allowed per link before the hop counts as lost")
-    p.add_argument("--solver", choices=["shortest", "edge"], default="edge")
+    p.add_argument("--churn-rate", type=float, default=0.0, help="probability an up node goes offline per perturbation tick")
+    p.add_argument("--churn-recovery", type=float, default=0.4, help="probability a down node recovers per perturbation tick")
+    p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
+    p.add_argument("--congestion-jitter", type=float, default=0.15)
+    p.add_argument("--perturb-interval", type=float, default=0.5, help="seconds between churn/congestion ticks")
+    p.add_argument("--solver", choices=["shortest", "risk-aware", "adaptive-risk", "edge"], default="edge")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--base-port", type=int, default=19000)
     args = p.parse_args()
 
     stats = asyncio.run(run_local_cluster(
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
-        duration=args.duration, drain=args.drain, traffic_rate=args.traffic_rate,
-        ttl=args.ttl, link_retries=args.link_retries, solver_name=args.solver,
+        sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
+        traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
+        churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
+        congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
+        perturb_interval=args.perturb_interval, solver_name=args.solver,
         seed=args.seed, base_port=args.base_port,
     ))
     print(json.dumps(stats.summary(), indent=2))
