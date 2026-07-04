@@ -26,6 +26,13 @@ class Packet:
     queue_delay: float = 0.0
     loss_risk: float = 0.0
     touched_sybil: bool = False
+    # Subset of touched_sybil that excludes the destination itself: a packet
+    # addressed TO a sybil node always "touches" it on delivery regardless of
+    # routing quality, which floors touched_sybil at roughly sybil_ratio no
+    # matter how good the router is. This tracks only exposure to a sybil
+    # acting as a RELAY (transit hop), which is the part routing can actually
+    # avoid -- see daemon.py's ClusterStats.transit_sybil_touch_ratio.
+    touched_transit_sybil: bool = False
     signature: str | None = None  # base64 ML-DSA-44 signature over immutable fields (see postquantum_crypto)
     last_from: NodeId | None = None
     last_neighbor: NodeId | None = None

@@ -89,6 +89,80 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreaterEqual(stats.sybil_touched, stats.dropped["sybil_drop"])
         self.assertGreater(stats.sybil_touch_ratio, 0.0)
 
+    def test_transit_sybil_metric_excludes_a_sybil_destination(self):
+        # A packet delivered directly to a sybil destination "touches" it
+        # (touched_sybil), but that's just who it was addressed to -- not a
+        # relay choice routing could have avoided. touched_transit_sybil
+        # must stay False, unlike the raw metric which floors at ~sybil_ratio
+        # regardless of routing quality.
+        from aegis_router.daemon import LocalNodeProtocol
+        from aegis_router.graph import LinkMetrics, P2PGraph
+        from aegis_router.solvers import ShortestPathSolver
+
+        async def scenario():
+            g = P2PGraph()
+            g.add_node(0)
+            g.add_node(1, sybil=True)
+            g.add_edge(0, 1, LinkMetrics(latency=0.01, bandwidth=0.8, loss=0.0, stability=0.9))
+            identity = PostQuantumIdentity.generate()
+            stats = ClusterStats()
+            loop = asyncio.get_running_loop()
+            proto0 = LocalNodeProtocol(
+                0, g, ShortestPathSolver(), {}, {}, identity, stats,
+                random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
+            )
+            pkt = Packet(packet_id=1, src=0, dst=1, created_at=0.0, ttl=10, node=0)
+            proto0._handle_arrival(pkt)
+            return pkt
+
+        pkt = asyncio.run(scenario())
+        self.assertTrue(pkt.touched_sybil)
+        self.assertFalse(pkt.touched_transit_sybil)
+
+    def test_transit_sybil_metric_includes_a_sybil_relay(self):
+        # Symmetric case: a sybil acting as an INTERMEDIATE hop toward an
+        # honest destination is exactly the exposure routing can control,
+        # so it must count in both metrics.
+        from aegis_router.daemon import LocalNodeProtocol
+        from aegis_router.graph import LinkMetrics, P2PGraph
+        from aegis_router.solvers import ShortestPathSolver
+
+        async def scenario():
+            g = P2PGraph()
+            g.add_node(0)
+            g.add_node(1, sybil=True)
+            g.add_node(2)
+            link = LinkMetrics(latency=0.01, bandwidth=0.8, loss=0.0, stability=0.9)
+            g.add_edge(0, 1, link)
+            g.add_edge(1, 2, link)
+            identity = PostQuantumIdentity.generate()
+            stats = ClusterStats()
+            loop = asyncio.get_running_loop()
+            proto0 = LocalNodeProtocol(
+                0, g, ShortestPathSolver(), {}, {}, identity, stats,
+                random.Random(1), 0.0, 10, 0, 1, 0.12, False, 4.0, loop,
+            )
+            pkt = Packet(packet_id=1, src=0, dst=2, created_at=0.0, ttl=10, node=0)
+            proto0._handle_arrival(pkt)
+            return pkt
+
+        pkt = asyncio.run(scenario())
+        self.assertTrue(pkt.touched_sybil)
+        self.assertTrue(pkt.touched_transit_sybil)
+
+    def test_transit_sybil_touched_never_exceeds_raw_sybil_touched(self):
+        # Invariant across a real multi-copy run: transit is always a subset
+        # of raw. Reuses the high-sybil-density/high-redundancy scenario that
+        # regression-tests the raw metric's own dedup.
+        stats = asyncio.run(run_local_cluster(
+            nodes=20, degree=5, sybil_ratio=0.4, sybil_extra_drop=0.5,
+            duration=4.0, drain=1.5, traffic_rate=8.0, ttl=12,
+            solver_name="shortest", seed=909, redundancy=4, base_port=19900,
+        ))
+        self.assertGreater(stats.sybil_touched, 0)
+        self.assertLessEqual(stats.transit_sybil_touched, stats.sybil_touched)
+        self.assertLessEqual(stats.sybil_touched, stats.generated)
+
     def test_churn_flips_nodes_offline(self):
         graph = generate_random_graph(nodes=10, degree=3, sybil_ratio=0.0, seed=1)
         asyncio.run(_run_perturb_briefly(

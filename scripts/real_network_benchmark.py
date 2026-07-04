@@ -44,9 +44,11 @@ def _fmt_pct(x: float) -> str:
 async def _run_seed(args, topo_seed: int, base_port: int) -> dict:
     common = dict(
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
-        sybil_stealth=args.sybil_stealth, duration=args.duration, drain=args.drain,
+        sybil_stealth=args.sybil_stealth, sybil_extra_drop=args.sybil_extra_drop,
+        duration=args.duration, drain=args.drain,
         traffic_rate=args.traffic_rate, ttl=args.ttl, link_retries=args.link_retries,
         redundancy=args.redundancy, redundancy_risk_tolerance=args.redundancy_risk_tolerance,
+        receipts=args.receipts, receipt_timeout=args.receipt_timeout,
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, seed=topo_seed,
@@ -72,6 +74,7 @@ def _aggregate(all_seed_results: list[dict], solver_name: str, tail: int) -> dic
         per_seed_means.append({
             "delivery_ratio": mean(r["delivery_ratio"] for r in runs),
             "sybil_touch_ratio": mean(r["sybil_touch_ratio"] for r in runs),
+            "transit_sybil_touch_ratio": mean(r["transit_sybil_touch_ratio"] for r in runs),
             "avg_hops": mean(r["avg_hops"] for r in runs if r["avg_hops"] is not None),
             "retransmissions": mean(r["retransmissions"] for r in runs),
             "generated": mean(r["generated"] for r in runs),
@@ -84,9 +87,10 @@ def _aggregate(all_seed_results: list[dict], solver_name: str, tail: int) -> dic
 async def main_async(args) -> None:
     print(f"=== Real-socket benchmark: {args.nodes} nodes, {args.topology_seeds} topology seed(s), "
           f"{args.learn_runs} learn run(s)/seed ===")
-    print(f"sybil_ratio={args.sybil_ratio} sybil_stealth={args.sybil_stealth} "
+    print(f"sybil_ratio={args.sybil_ratio} sybil_stealth={args.sybil_stealth} sybil_extra_drop={args.sybil_extra_drop} "
           f"churn_rate={args.churn_rate} congestion_rate={args.congestion_rate} "
-          f"link_retries={args.link_retries} redundancy={args.redundancy} duration={args.duration}s drain={args.drain}s\n")
+          f"link_retries={args.link_retries} redundancy={args.redundancy} receipts={args.receipts} "
+          f"duration={args.duration}s drain={args.drain}s\n")
 
     all_results = []
     t_start = time.monotonic()
@@ -98,16 +102,29 @@ async def main_async(args) -> None:
         for solver_name, runs in seed_result.items():
             last = runs[-1]
             print(f"seed={topo_seed} {solver_name:14s} deliv={_fmt_pct(last['delivery_ratio'])} "
-                  f"sybil={_fmt_pct(last['sybil_touch_ratio'])} hops={last['avg_hops']:.2f} "
-                  f"retx={last['retransmissions']} ({len(runs)} run(s), {elapsed:.0f}s for this seed)")
+                  f"sybil={_fmt_pct(last['sybil_touch_ratio'])} transit={_fmt_pct(last['transit_sybil_touch_ratio'])} "
+                  f"hops={last['avg_hops']:.2f} retx={last['retransmissions']} "
+                  f"({len(runs)} run(s), {elapsed:.0f}s for this seed)")
 
     print(f"\n-- aggregated over {args.topology_seeds} topology seed(s), tail-{args.tail} mean --")
+    aggs = {}
     for solver_name in args.solvers:
         agg = _aggregate(all_results, solver_name, args.tail)
+        aggs[solver_name] = agg
         print(f"{solver_name:14s} deliv={_fmt_pct(agg['delivery_ratio'])} "
               f"(spread {agg['delivery_spread']*100:.1f}pp) sybil={_fmt_pct(agg['sybil_touch_ratio'])} "
+              f"transit={_fmt_pct(agg['transit_sybil_touch_ratio'])} "
               f"hops={agg['avg_hops']:.2f} retx/run={agg['retransmissions']:.1f} "
               f"packets/run={agg['generated']:.0f}")
+
+    if "shortest" in aggs and "edge" in aggs:
+        for label, key in (("raw", "sybil_touch_ratio"), ("transit", "transit_sybil_touch_ratio")):
+            ref = aggs["shortest"][key]
+            got = aggs["edge"][key]
+            if ref > 0:
+                reduction = (ref - got) / ref * 100
+                print(f"sybil-touch relative reduction, {label} (edge vs shortest): {reduction:.1f}%"
+                      + (" (OPTIMIZATION.md v0.2 target: >= 30%)" if label == "transit" else " -- includes the sybil-ratio floor from packets addressed TO a sybil, which no router can avoid"))
 
     print(f"\ntotal wall clock: {time.monotonic() - t_start:.0f}s")
 
@@ -118,13 +135,16 @@ def main() -> None:
     p.add_argument("--degree", type=int, default=4)
     p.add_argument("--sybil-ratio", type=float, default=0.15)
     p.add_argument("--sybil-stealth", type=float, default=0.0)
+    p.add_argument("--sybil-extra-drop", type=float, default=0.12, help="extra loss added on top of a sybil edge's advertised loss -- 0.12 models a barely-there dropper masked by ARQ, 0.6+ models a deliberate blackholer")
     p.add_argument("--duration", type=float, default=20.0)
     p.add_argument("--drain", type=float, default=5.0)
     p.add_argument("--traffic-rate", type=float, default=12.0)
     p.add_argument("--ttl", type=int, default=16)
     p.add_argument("--link-retries", type=int, default=0)
     p.add_argument("--redundancy", type=int, default=1, help="source-path redundancy: disjoint-first-hop copies per packet")
-    p.add_argument("--redundancy-risk-tolerance", type=float, default=0.12)
+    p.add_argument("--redundancy-risk-tolerance", type=float, default=0.05)
+    p.add_argument("--receipts", action="store_true")
+    p.add_argument("--receipt-timeout", type=float, default=4.0)
     p.add_argument("--churn-rate", type=float, default=0.0)
     p.add_argument("--churn-recovery", type=float, default=0.4)
     p.add_argument("--congestion-rate", type=float, default=0.0)

@@ -51,6 +51,7 @@ def packet_to_wire(pkt: Packet) -> dict:
         "queue_delay": pkt.queue_delay,
         "loss_risk": pkt.loss_risk,
         "touched_sybil": pkt.touched_sybil,
+        "touched_transit_sybil": pkt.touched_transit_sybil,
         "signature": pkt.signature,
         "last_from": pkt.last_from,
         "last_neighbor": pkt.last_neighbor,
@@ -73,6 +74,7 @@ def packet_from_wire(data: dict) -> Packet:
     pkt.queue_delay = data["queue_delay"]
     pkt.loss_risk = data["loss_risk"]
     pkt.touched_sybil = data["touched_sybil"]
+    pkt.touched_transit_sybil = data.get("touched_transit_sybil", False)
     pkt.signature = data["signature"]
     pkt.last_from = data["last_from"]
     pkt.last_neighbor = data["last_neighbor"]
@@ -92,6 +94,13 @@ class ClusterStats:
     # later for an unrelated reason; this is the security-relevant exposure
     # metric (matches EventStats.sybil_touch_ratio in event_sim.py).
     sybil_touched: int = 0
+    # Subset of sybil_touched that excludes packets whose sybil-touch is only
+    # their own destination: a packet addressed TO a sybil always "touches"
+    # it on delivery no matter how good the routing is, flooring
+    # sybil_touch_ratio at roughly sybil_ratio regardless of solver quality.
+    # This is the part routing can actually influence -- see
+    # Packet.touched_transit_sybil for where it's set.
+    transit_sybil_touched: int = 0
     # Extra copies sent for source-path redundancy, beyond the first (the
     # first copy of every packet is "free" -- it's what non-redundant mode
     # also sends). Bandwidth overhead accounting, parallel to retransmissions.
@@ -105,6 +114,7 @@ class ClusterStats:
     # sybil_touch_ratio in a way that has nothing to do with actual
     # exposure, and making it incomparable between redundancy=1 and >1 runs.
     _sybil_touched_ids: set[int] = field(default_factory=set, repr=False)
+    _transit_touched_ids: set[int] = field(default_factory=set, repr=False)
     # Delivery-receipt accounting (see LocalNodeProtocol receipt machinery):
     # signed end-to-end confirmations that came back vs forwards whose
     # receipt never arrived within the timeout (a downstream-failure signal).
@@ -133,6 +143,9 @@ class ClusterStats:
         if pkt.touched_sybil and pkt.packet_id not in self._sybil_touched_ids:
             self._sybil_touched_ids.add(pkt.packet_id)
             self.sybil_touched += 1
+        if pkt.touched_transit_sybil and pkt.packet_id not in self._transit_touched_ids:
+            self._transit_touched_ids.add(pkt.packet_id)
+            self.transit_sybil_touched += 1
 
     def record_retransmissions(self, n: int) -> None:
         self.retransmissions += n
@@ -148,6 +161,10 @@ class ClusterStats:
     def sybil_touch_ratio(self) -> float:
         return self.sybil_touched / max(1, self.generated)
 
+    @property
+    def transit_sybil_touch_ratio(self) -> float:
+        return self.transit_sybil_touched / max(1, self.generated)
+
     def summary(self) -> dict:
         n = len(self.delivered)
         return {
@@ -159,6 +176,7 @@ class ClusterStats:
             "avg_latency": mean(p.latency for p in self.delivered) if n else None,
             "retransmissions": self.retransmissions,
             "sybil_touch_ratio": self.sybil_touch_ratio,
+            "transit_sybil_touch_ratio": self.transit_sybil_touch_ratio,
             "redundant_copies": self.redundant_copies,
             "receipts_confirmed": self.receipts_confirmed,
             "receipt_timeouts": self.receipt_timeouts,
@@ -383,6 +401,12 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         # must still count as sybil-touched (a prior bug here only updated
         # this on the success path, undercounting real exposure).
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+        # `nxt != pkt.dst`: a sybil chosen as the FINAL destination isn't a
+        # relay decision -- it's just who the packet was addressed to. Only
+        # count exposure to a sybil acting as an intermediate transit hop,
+        # the part routing quality can actually influence.
+        if nxt in self.graph.sybil_nodes and nxt != pkt.dst:
+            pkt.touched_transit_sybil = True
         if not success:
             # An immediate, first-hand failure at this very hop: observe now
             # in both modes -- there is no downstream to wait on.
