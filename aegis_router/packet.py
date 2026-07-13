@@ -36,6 +36,10 @@ class Packet:
     signature: str | None = None  # base64 ML-DSA-44 signature over immutable fields (see postquantum_crypto)
     last_from: NodeId | None = None
     last_neighbor: NodeId | None = None
+    # Receipt tracking: set by the daemon when a signed receipt confirms
+    # end-to-end delivery of this specific forwarding decision. Used by
+    # receipt-aware solvers to distinguish "link worked" from "packet arrived".
+    receipt_confirmed: bool = False
 
     def __post_init__(self) -> None:
         if self.node is None:
