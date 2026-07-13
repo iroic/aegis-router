@@ -52,7 +52,7 @@ class RouterEnv(Env):
             pkt.dst,
             pkt.ttl,
             getattr(pkt, "risk_budget", 0.3),
-            int(pkt.touched_sybil),
+            pkt.loss_risk,
         ], dtype=np.float32)
         neighbors = list(self.graph.adj[pkt.node])
         if not neighbors:
@@ -122,9 +122,8 @@ class RouterEnv(Env):
             pkt.touched_sybil = pkt.touched_sybil or chosen in self.graph.sybil_nodes
             pkt.last_from = pkt.node
             pkt.last_neighbor = chosen
-            reason = "sybil_drop" if chosen in self.graph.sybil_nodes else "link_loss"
             reward = compute_reward(pkt, delivered=False,
-                                    drop_reason=reason,
+                                    drop_reason="link_loss",
                                     recent_risks=self.recent_risks)
             return self._state_from_packet(pkt), reward, True, False, {}
         # success
@@ -162,7 +161,7 @@ def evaluate_policy(model, graph, n_episodes=200):
             pkt.dst,
             pkt.ttl,
             getattr(pkt, "risk_budget", 0.3),
-            int(pkt.touched_sybil),
+            pkt.loss_risk,
         ], dtype=np.float32)
         if not neighbors:
             extra = np.zeros(6, dtype=np.float32)

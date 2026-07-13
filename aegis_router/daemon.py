@@ -442,8 +442,10 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         if not success:
             # An immediate, first-hand failure at this very hop: observe now
             # in both modes -- there is no downstream to wait on.
-            self._observe_own_link(nxt, success=False)
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
+            # Sybil membership remains evaluator-only. A router sees a failed
+            # transmission, not why the remote peer was classified as Sybil.
+            self._observe_own_link(nxt, success=False, reason="link_loss")
             self.stats.record_drop(reason, pkt)
             return
         if self.receipts:
@@ -484,12 +486,14 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         if observer is None:
             return
         if reason is None and not success:
-            reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
+            reason = "link_loss"
         observer(
             neighbor=nxt,
             delivered=success,
             dropped=not success,
-            touched_sybil=nxt in self.graph.sybil_nodes,
+            # Hidden labels are for aggregate evaluation only; passing them to
+            # a solver would give its learned reputation an oracle.
+            touched_sybil=False,
             reason=reason,
             from_node=self.node_id,
             receipt_confirmed=receipt_confirmed,

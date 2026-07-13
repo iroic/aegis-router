@@ -333,8 +333,8 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     """Risk-aware solver that adapts its budget from recent outcomes.
 
     Drops mean we are too conservative / failing to find viable paths, so the
-    budget relaxes. Sybil touches mean we are accepting suspicious routes, so
-    the budget tightens. This keeps risk low without killing delivery.
+    budget relaxes. It deliberately does not react to hidden Sybil labels: a
+    deployed router can observe failures, not the simulator's ground truth.
     """
 
     risk_budget: float = 0.30
@@ -343,14 +343,16 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     adapt_step: float = 0.06
     window_size: int = 10
     drop_threshold: float = 0.35
+    # Retained for serialized configuration compatibility. It is intentionally
+    # ignored because Sybil membership is evaluator-only information.
     sybil_threshold: float = 0.5
     _recent_drops: deque[bool] = field(default_factory=deque)
+    # Retained only for backwards-compatible construction/state; never read.
     _recent_sybil: deque[bool] = field(default_factory=deque)
 
     def __post_init__(self) -> None:
         # Bounded windows: append auto-evicts the oldest in O(1), no list.pop(0).
         self._recent_drops = deque(self._recent_drops, maxlen=self.window_size)
-        self._recent_sybil = deque(self._recent_sybil, maxlen=self.window_size)
 
     def observe_result(
         self,
@@ -365,15 +367,11 @@ class AdaptiveRiskSolver(RiskAwareHybridSolver):
     ) -> None:
         super().observe_result(neighbor=neighbor, delivered=delivered, dropped=dropped, touched_sybil=touched_sybil, reason=reason, from_node=from_node, receipt_confirmed=receipt_confirmed)
         self._recent_drops.append(dropped)
-        self._recent_sybil.append(touched_sybil)
         if len(self._recent_drops) < self.window_size:
             return
         drop_rate = sum(self._recent_drops) / self.window_size
-        sybil_rate = sum(self._recent_sybil) / self.window_size
         if drop_rate > self.drop_threshold:
             self.risk_budget = min(self.max_budget, self.risk_budget + self.adapt_step)
-        elif sybil_rate > self.sybil_threshold:
-            self.risk_budget = max(self.min_budget, self.risk_budget - self.adapt_step)
 
 
 # Beta-style smoothing prior: with few observations badness stays near 0, so a
@@ -394,6 +392,7 @@ NODE_DOWN_WEIGHT = 0.05
 class PeerScore:
     delivered: float = 0.0
     drops: float = 0.0
+    # Legacy serialized field. It is evaluator-only and never affects routing.
     sybil_touches: float = 0.0
     link_losses: float = 0.0
     loops: float = 0.0
@@ -405,7 +404,6 @@ class PeerScore:
         total = self.delivered + self.drops
         weighted = (
             self.drops
-            + 0.7 * self.sybil_touches
             + 0.35 * self.link_losses
             + 0.5 * self.loops
             + 0.25 * self.ttl_expired
@@ -428,7 +426,7 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
     """Adaptive router with durable peer/path memory.
 
     It stores per-neighbor outcomes in JSON so repeated runs keep learning which
-    next hops produce deliveries, drops, and Sybil exposure.
+    next hops produce deliveries and observable failures.
     """
 
     state_path: str | Path = "aegis_state.json"
@@ -482,8 +480,6 @@ class PersistentLearningSolver(AdaptiveRiskSolver):
             score.node_down += 1
         elif dropped:
             score.drops += 1
-        if touched_sybil:
-            score.sybil_touches += 1
         if reason == "link_loss":
             score.link_losses += 1
         elif reason == "loop":
@@ -508,6 +504,7 @@ class EdgeScore:
 
     delivered: float = 0.0
     drops: float = 0.0
+    # Legacy serialized field. It is evaluator-only and never affects routing.
     sybil_touches: float = 0.0
     link_losses: float = 0.0
     loops: float = 0.0
@@ -527,7 +524,6 @@ class EdgeScore:
         total = self.delivered + self.drops
         weighted = (
             self.drops
-            + 0.7 * self.sybil_touches
             + 0.35 * self.link_losses
             + 0.5 * self.loops
             + 0.25 * self.ttl_expired
@@ -569,7 +565,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     # Route through pre-computed trusted 2-3 hop paths before scored routing.
     use_trusted_path: bool = True
     edge_scores: defaultdict[EdgeKey, EdgeScore] = field(default_factory=lambda: defaultdict(EdgeScore))
-    # Parameters for reputation-based path routing
+    # Parameters for reputation-based path routing.
     NODE_RISK_THRESHOLD: float = 0.5
     EDGE_BADNESS_THRESHOLD: float = 0.5
     # Minimum receipt-confirmed success rate for an edge to be considered in trusted paths.
@@ -578,8 +574,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
     
     def find_trusted_path(self, graph: P2PGraph, packet: Packet) -> list[NodeId] | None:
         """
-        Build 2-3 hop paths using reputation scores to avoid high-risk nodes.
-        Prioritizes paths that avoid nodes with high sybil_touch history.
+        Build 2-3 hop paths using only observable edge and peer failures.
         """
         if packet.node is None or packet.ttl < 2:
             return None
@@ -617,8 +612,7 @@ class EdgeLearningSolver(PersistentLearningSolver):
                 self.edge_scores[edge2].receipt_success_rate < self.RECEIPT_SUCCESS_THRESHOLD):
                 continue
             if (self.edge_scores[edge1].badness > self.EDGE_BADNESS_THRESHOLD or
-                self.edge_scores[edge2].badness > self.EDGE_BADNESS_THRESHOLD or
-                self.peer_scores[n1].sybil_touches > self.NODE_RISK_THRESHOLD):
+                self.edge_scores[edge2].badness > self.EDGE_BADNESS_THRESHOLD):
                 continue
             candidates.append([current, n1, dest])
         
@@ -648,9 +642,6 @@ class EdgeLearningSolver(PersistentLearningSolver):
                        for edge in (edge1, edge2, edge3)):
                     continue
                 if any(self.edge_scores[edge].badness > self.EDGE_BADNESS_THRESHOLD for edge in (edge1, edge2, edge3)):
-                    continue
-                if (self.peer_scores[n1].sybil_touches > self.NODE_RISK_THRESHOLD or
-                    self.peer_scores[n2].sybil_touches > self.NODE_RISK_THRESHOLD):
                     continue
                 candidates.append([current, n1, n2, dest])
         
@@ -732,8 +723,6 @@ class EdgeLearningSolver(PersistentLearningSolver):
             score.node_down += 1
         elif dropped:
             score.drops += 1
-        if touched_sybil:
-            score.sybil_touches += 1
         if reason == "link_loss":
             score.link_losses += 1
         elif reason == "loop":
