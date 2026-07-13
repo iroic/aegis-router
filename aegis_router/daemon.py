@@ -27,7 +27,16 @@ from statistics import mean
 from .graph import LinkMetrics, NodeId, P2PGraph, generate_random_graph
 from .packet import Packet
 from .postquantum_crypto import PostQuantumIdentity, sign_packet, sign_receipt, verify_packet, verify_receipt
-from .solvers import AdaptiveRiskSolver, EdgeLearningSolver, RiskAwareHybridSolver, RoutingSolver, ShortestPathSolver
+from .solvers import (
+    AdaptiveRiskSolver,
+    EdgeLearningSolver,
+    EigenTrustSolver,
+    GlobalTrustLedger,
+    HybridSolver,
+    RiskAwareHybridSolver,
+    RoutingSolver,
+    ShortestPathSolver,
+)
 
 Registry = dict[NodeId, tuple[str, int]]
 PubkeyRegistry = dict[NodeId, bytes]
@@ -435,7 +444,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         delay = m.latency * (1 + failed_tries)
         self.loop.call_later(delay, self._send_now, payload, nxt)
 
-    def _observe_own_link(self, nxt: NodeId, *, success: bool, reason: str | None = None) -> None:
+    def _observe_own_link(self, nxt: NodeId, *, success: bool, reason: str | None = None, receipt_confirmed: bool = False) -> None:
         """Feed the local solver's reputation learner from THIS hop's own
         outcome, not the packet's eventual end-to-end fate.
 
@@ -460,6 +469,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
             touched_sybil=nxt in self.graph.sybil_nodes,
             reason=reason,
             from_node=self.node_id,
+            receipt_confirmed=receipt_confirmed,
         )
 
     def _send_now(self, payload: bytes, nxt: NodeId) -> None:
@@ -510,7 +520,7 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         if self._pending_receipts.pop((r["packet_id"], nxt), None) is None:
             return  # already resolved (timed out, or a duplicate receipt)
         self.stats.record_receipt_confirmed()
-        self._observe_own_link(nxt, success=True)
+        self._observe_own_link(nxt, success=True, receipt_confirmed=True)
         if i > 0:
             self._send_receipt(r, path[i - 1])
 
@@ -543,15 +553,29 @@ class LocalNodeProtocol(asyncio.DatagramProtocol):
         self.sweep_receipt_timeouts(float("inf"))
 
 
-def _make_solver(name: str, *, seed: int) -> RoutingSolver:
+def _make_solver(
+    name: str,
+    *,
+    seed: int,
+    trust_ledger: GlobalTrustLedger | None = None,
+) -> RoutingSolver:
     if name == "shortest":
         return ShortestPathSolver()
+    if name == "hybrid":
+        from aegis_router.agent import HybridRoutingScorer
+        return HybridSolver(scorer=HybridRoutingScorer())
     if name == "risk-aware":
         return RiskAwareHybridSolver()
     if name == "adaptive-risk":
         return AdaptiveRiskSolver()
     if name == "edge":
         return EdgeLearningSolver(state_path=f"/tmp/aegis_daemon_node_state_{seed}.json", edge_penalty=1.0, risk_budget=0.35)
+    if name == "edge-light":
+        return EdgeLearningSolver(state_path=f"/tmp/aegis_daemon_node_state_{seed}.json", edge_penalty=1.0, risk_budget=0.35, use_trusted_path=False)
+    if name == "eigentrust":
+        if trust_ledger is None:
+            raise ValueError("eigentrust requires a shared GlobalTrustLedger")
+        return EigenTrustSolver(ledger=trust_ledger)
     raise ValueError(f"unknown solver: {name}")
 
 
@@ -617,6 +641,8 @@ async def run_local_cluster(
     congestion_jitter: float = 0.15,
     perturb_interval: float = 0.5,
     solver_name: str = "edge",
+    eigentrust_pretrusted: tuple[NodeId, ...] | None = None,
+    eigentrust_recompute_interval: float = 0.5,
     seed: int = 7,
     base_port: int = 19000,
 ) -> ClusterStats:
@@ -627,12 +653,24 @@ async def run_local_cluster(
     pubkeys: PubkeyRegistry = {n: identities[n].signing_public_key for n in node_ids}
     stats = ClusterStats()
     rng = random.Random(seed + 1)
+    trust_ledger = None
+    if solver_name == "eigentrust":
+        if eigentrust_recompute_interval <= 0.0:
+            raise ValueError("eigentrust_recompute_interval must be positive")
+        trust_ledger = GlobalTrustLedger(
+            node_ids,
+            pretrusted_nodes=eigentrust_pretrusted,
+        )
 
     loop = asyncio.get_running_loop()
     protocols: dict[NodeId, LocalNodeProtocol] = {}
     transports: list[asyncio.BaseTransport] = []
     for n in node_ids:
-        solver = _make_solver(solver_name, seed=seed * 1000 + n)
+        solver = _make_solver(
+            solver_name,
+            seed=seed * 1000 + n,
+            trust_ledger=trust_ledger,
+        )
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
             random.Random(seed + 100 + n), sybil_extra_drop, ttl, link_retries,
@@ -662,6 +700,16 @@ async def run_local_cluster(
     if receipts:
         receipt_sweep_task = asyncio.create_task(_receipt_sweep_loop())
 
+    async def _eigentrust_recompute_loop() -> None:
+        assert trust_ledger is not None
+        while True:
+            await asyncio.sleep(eigentrust_recompute_interval)
+            trust_ledger.recompute()
+
+    eigentrust_task: asyncio.Task | None = None
+    if trust_ledger is not None:
+        eigentrust_task = asyncio.create_task(_eigentrust_recompute_loop())
+
     packet_ids = itertools.count()
     end_time = loop.time() + duration
     try:
@@ -672,7 +720,7 @@ async def run_local_cluster(
             await asyncio.sleep(rng.expovariate(traffic_rate))
         await asyncio.sleep(drain)
     finally:
-        for task in (perturb_task, receipt_sweep_task):
+        for task in (perturb_task, receipt_sweep_task, eigentrust_task):
             if task is not None:
                 task.cancel()
                 try:
@@ -703,6 +751,8 @@ async def run_local_cluster(
             saver = getattr(protocol.solver, "save", None)
             if callable(saver):
                 saver()
+        if trust_ledger is not None:
+            trust_ledger.recompute()
     return stats
 
 
@@ -726,10 +776,15 @@ def main() -> None:
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
     p.add_argument("--congestion-jitter", type=float, default=0.15)
     p.add_argument("--perturb-interval", type=float, default=0.5, help="seconds between churn/congestion ticks")
-    p.add_argument("--solver", choices=["shortest", "risk-aware", "adaptive-risk", "edge"], default="edge")
+    p.add_argument("--solver", choices=["shortest", "risk-aware", "adaptive-risk", "edge", "eigentrust"], default="edge")
+    p.add_argument("--eigentrust-pretrusted", default="", help="comma-separated external trust anchors; empty uses uniform pretrust and never hidden Sybil labels")
+    p.add_argument("--eigentrust-recompute-interval", type=float, default=0.5, help="seconds between shared EigenTrust power iterations")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--base-port", type=int, default=19000)
     args = p.parse_args()
+    eigentrust_pretrusted = tuple(
+        int(node) for node in args.eigentrust_pretrusted.split(",") if node.strip()
+    ) or None
 
     stats = asyncio.run(run_local_cluster(
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
@@ -740,6 +795,8 @@ def main() -> None:
         churn_rate=args.churn_rate, churn_recovery=args.churn_recovery,
         congestion_rate=args.congestion_rate, congestion_jitter=args.congestion_jitter,
         perturb_interval=args.perturb_interval, solver_name=args.solver,
+        eigentrust_pretrusted=eigentrust_pretrusted,
+        eigentrust_recompute_interval=args.eigentrust_recompute_interval,
         seed=args.seed, base_port=args.base_port,
     ))
     print(json.dumps(stats.summary(), indent=2))

@@ -44,6 +44,18 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(stats.generated, 0)
         self.assertNotIn("bad_signature", stats.dropped)
 
+    def test_real_sockets_work_with_shared_eigentrust(self):
+        # Regression guard for the daemon-only integration: all local nodes use
+        # one shared ledger while packets still traverse real UDP + ML-DSA.
+        stats = asyncio.run(run_local_cluster(
+            nodes=8, degree=3, sybil_ratio=0.2, duration=2.0, drain=1.5,
+            traffic_rate=4.0, ttl=10, solver_name="eigentrust", seed=103,
+            eigentrust_recompute_interval=0.1, base_port=19380,
+        ))
+        self.assertGreater(stats.generated, 0)
+        self.assertGreater(len(stats.delivered), 0)
+        self.assertNotIn("bad_signature", stats.dropped)
+
     def test_edge_solver_persists_learned_state_to_disk(self):
         # Regression guard: run_local_cluster must call solver.save() at the
         # end, or "learning across repeated runs" is a no-op even though a
