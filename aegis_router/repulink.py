@@ -11,14 +11,27 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 import math
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from .agent import _progress_delta
 from .graph import NodeId, P2PGraph
 from .packet import Packet
+from .postquantum_crypto import verify_endorsement
 
 Endorsement = tuple[NodeId, NodeId, float]
 EdgeKey = tuple[NodeId, NodeId]
+
+
+@dataclass(frozen=True)
+class SignedEndorsement:
+    """An explicit endorsement whose issuer is authenticated with ML-DSA."""
+
+    endorser: NodeId
+    endorsee: NodeId
+    confidence: float
+    issued_at: float
+    expires_at: float
+    signature: str
 
 
 @dataclass
@@ -31,6 +44,7 @@ class RepuLinkLedger:
 
     nodes: Iterable[NodeId]
     endorsements: Iterable[Endorsement] = ()
+    trusted_endorsers: Iterable[NodeId] = ()
     interaction_weight: float = 0.5
     backward_discount: float = 0.5
     signal_sensitivity: float = 0.25
@@ -59,6 +73,10 @@ class RepuLinkLedger:
     _reward: dict[NodeId, float] = field(
         default_factory=dict, init=False, repr=False
     )
+    _trusted_endorsers: frozenset[NodeId] = field(
+        default_factory=frozenset, init=False, repr=False
+    )
+    _signed_endorsements_accepted: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         self.nodes = tuple(dict.fromkeys(self.nodes))
@@ -79,6 +97,12 @@ class RepuLinkLedger:
 
         supplied = tuple(self.endorsements)
         self.endorsements = supplied
+        trusted = frozenset(self.trusted_endorsers)
+        unknown_trusted = trusted - set(self.nodes)
+        if unknown_trusted:
+            raise ValueError(f"unknown trusted endorsers: {sorted(unknown_trusted)}")
+        self.trusted_endorsers = tuple(sorted(trusted))
+        self._trusted_endorsers = trusted
         for endorser, endorsee, confidence in supplied:
             self.add_endorsement(endorser, endorsee, confidence)
         self._reputation = self.cold_start()
@@ -106,6 +130,48 @@ class RepuLinkLedger:
         if edge in self._endorsements:
             raise ValueError(f"duplicate endorsement: {endorser}->{endorsee}")
         self._endorsements[edge] = confidence
+
+    def add_signed_endorsement(
+        self,
+        endorsement: SignedEndorsement,
+        *,
+        public_keys: Mapping[NodeId, bytes],
+        now: float,
+    ) -> None:
+        """Verify and accept one endorsement from a configured trust anchor.
+
+        A valid ML-DSA signature establishes issuer authenticity, not issuer
+        trustworthiness. The separate ``trusted_endorsers`` allowlist is
+        therefore mandatory for signed attestations; this prevents a Sybil
+        identity from self-authorizing its own reputation.
+        """
+        self._require_node(endorsement.endorser)
+        self._require_node(endorsement.endorsee)
+        if endorsement.endorser not in self._trusted_endorsers:
+            raise ValueError("endorser is not a configured trust anchor")
+        if not math.isfinite(now):
+            raise ValueError("endorsement verification time must be finite")
+        if now < endorsement.issued_at or now > endorsement.expires_at:
+            raise ValueError("endorsement is not currently valid")
+        public_key = public_keys.get(endorsement.endorser)
+        if public_key is None:
+            raise ValueError("missing endorser public key")
+        if not verify_endorsement(
+            endorsement.endorser,
+            endorsement.endorsee,
+            endorsement.confidence,
+            endorsement.issued_at,
+            endorsement.expires_at,
+            endorsement.signature,
+            public_key,
+        ):
+            raise ValueError("invalid endorsement signature")
+        self.add_endorsement(
+            endorsement.endorser,
+            endorsement.endorsee,
+            endorsement.confidence,
+        )
+        self._signed_endorsements_accepted += 1
 
     @property
     def reputation(self) -> dict[NodeId, float]:
@@ -308,6 +374,8 @@ class RepuLinkLedger:
             "iterations": self.iterations,
             "residual": self.residual,
             "endorsement_edges": len(self._endorsements),
+            "trusted_endorsers": len(self._trusted_endorsers),
+            "signed_endorsements_accepted": self._signed_endorsements_accepted,
             "penalty_mass": sum(self._penalty.values()),
             "reward_mass": sum(self._reward.values()),
         }

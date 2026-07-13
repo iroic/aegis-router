@@ -4,8 +4,10 @@ from aegis_router.packet import Packet
 from aegis_router.postquantum_crypto import (
     PostQuantumIdentity,
     kyber768_roundtrip,
+    sign_endorsement,
     sign_packet,
     sign_receipt,
+    verify_endorsement,
     verify_packet,
     verify_receipt,
 )
@@ -55,6 +57,25 @@ class PostQuantumCryptoTests(unittest.TestCase):
         # (different packet_id / created_at) even by the legitimate dst.
         self.assertFalse(verify_receipt(43, 1, 7, 123.0, sig, dst.signing_public_key))
         self.assertFalse(verify_receipt(42, 1, 7, 999.0, sig, dst.signing_public_key))
+
+    def test_endorsement_signature_is_bound_to_issuer_target_confidence_and_expiry(self):
+        endorser = PostQuantumIdentity.generate()
+        signature = sign_endorsement(
+            1, 7, 0.8, 100.0, 200.0, endorser.signing_secret_key,
+        )
+
+        self.assertTrue(verify_endorsement(
+            1, 7, 0.8, 100.0, 200.0, signature,
+            endorser.signing_public_key,
+        ))
+        self.assertFalse(verify_endorsement(
+            1, 7, 0.7, 100.0, 200.0, signature,
+            endorser.signing_public_key,
+        ))
+        self.assertFalse(verify_endorsement(
+            1, 7, 0.8, 100.0, 201.0, signature,
+            endorser.signing_public_key,
+        ))
 
     def test_ml_kem_768_shared_secret_roundtrip(self):
         identity = PostQuantumIdentity.generate()
