@@ -1,17 +1,33 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv311/
 .env
 .pytest_cache/
 build/
 dist/
 *.egg-info/
-aegis_state.json
-.venv311/
-runs/
-.arbor/
+
+# Runtime state (generated, not source)
+aegis_state*.json
 eval_state.json
-.autoresearch/
-.coordinator/
+
+# Arbor agent junk
+.arbor/
+
+# Experiment outputs
+runs/
 results/
-cache_old_*/
+eval_tmp/
+eval_output.txt
+final_stats.txt
+optimal_run.txt
+grid_results.tsv
+profiles/
+
+# Deployment
+deploy/
+
+# OS
+.DS_Store
+Thumbs.db
