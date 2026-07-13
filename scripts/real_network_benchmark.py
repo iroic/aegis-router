@@ -35,7 +35,7 @@ from statistics import mean, stdev
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from aegis_router.daemon import run_local_cluster  # noqa: E402
+from aegis_router.daemon import parse_endorsements, run_local_cluster  # noqa: E402
 
 
 def _fmt_pct(x: float) -> str:
@@ -136,6 +136,10 @@ async def _run_seed(args, topo_seed: int, base_port: int) -> dict:
         eigentrust_pretrusted=getattr(args, "eigentrust_pretrusted", None),
         eigentrust_recompute_interval=getattr(
             args, "eigentrust_recompute_interval", 0.5,
+        ),
+        repulink_endorsements=getattr(args, "repulink_endorsements", ()),
+        repulink_recompute_interval=getattr(
+            args, "repulink_recompute_interval", 0.5,
         ),
         seed=topo_seed,
     )
@@ -401,9 +405,11 @@ def main() -> None:
     p.add_argument("--congestion-rate", type=float, default=0.0)
     p.add_argument("--congestion-jitter", type=float, default=0.15)
     p.add_argument("--perturb-interval", type=float, default=0.5)
-    p.add_argument("--solvers", default="shortest,edge", help="comma-separated: shortest,risk-aware,adaptive-risk,eigentrust,edge")
+    p.add_argument("--solvers", default="shortest,edge", help="comma-separated: shortest,risk-aware,adaptive-risk,eigentrust,repulink,edge")
     p.add_argument("--eigentrust-pretrusted", default="", help="comma-separated external trust anchors; empty uses uniform pretrust")
     p.add_argument("--eigentrust-recompute-interval", type=float, default=0.5)
+    p.add_argument("--repulink-endorsements", default="", help="comma-separated explicit endorser:endorsee:confidence edges; no topology-derived endorsements")
+    p.add_argument("--repulink-recompute-interval", type=float, default=0.5)
     p.add_argument("--topology-seeds", type=int, default=2, help="number of independent topology/traffic draws")
     p.add_argument("--learn-runs", type=int, default=3, help="sequential persistent-state runs per seed for the edge solver")
     p.add_argument("--tail", type=int, default=2, help="how many trailing learn-runs to average per seed")
@@ -414,6 +420,10 @@ def main() -> None:
     args.eigentrust_pretrusted = tuple(
         int(node) for node in args.eigentrust_pretrusted.split(",") if node.strip()
     ) or None
+    try:
+        args.repulink_endorsements = parse_endorsements(args.repulink_endorsements)
+    except ValueError as exc:
+        p.error(str(exc))
     args.tail = min(args.tail, args.learn_runs)
 
     asyncio.run(main_async(args))

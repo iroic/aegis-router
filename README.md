@@ -9,8 +9,9 @@ l'anonymat, mais ne le livre pas encore: le chemin est actuellement en clair.
 Le coeur du projet evalue des routeurs ou chaque noeud ne voit que ses voisins
 directs (latence, perte, stabilite, bande passante). Les routeurs doivent livrer
 des paquets sans identite ni topologie globale, face a des noeuds Sybil
-malveillants, du churn, et de la congestion. `eigentrust` est l'exception
-documentee: une baseline comparative a information globale partagee.
+malveillants, du churn, et de la congestion. `eigentrust` et `repulink` sont
+des exceptions documentees: des baselines comparatives a information globale
+partagee.
 
 ## Solvers disponibles
 
@@ -22,6 +23,7 @@ documentee: une baseline comparative a information globale partagee.
 | `risk-aware` | Budget de risque par paquet + réputation online par pair |
 | `adaptive-risk` | Budget de risque adaptatif (relaxe si drops, resserre si sybil) |
 | `eigentrust` | Baseline EigenTrust a information globale partagee, pre-trust uniforme ou ancres externes explicites |
+| `repulink` | Baseline RepuLink globale: feedback par arete, endossements explicites et responsabilite retro-propagee (BEPP/BERP) |
 | `edge` | Apprentissage persistant par edge orienté + chemins trusted 2-3 hops |
 | `edge-light` | Variante allégée sans trusted paths |
 
@@ -74,11 +76,18 @@ et mecanismes deployables:
    EigenTrust globale, avec seeds apparies, IC95, exposition Sybil brute et
    transit, livraison et sauts. Le ledger global est un instrument de recherche,
    pas un protocole decentralise. Il n'utilise jamais les labels Sybil caches.
-2. **Phase 1:** introduire un graphe d'endossements explicite et etudier la
-   responsabilite avec propagation arriere de RepuLink
+2. **Phase 1, baseline implementee:** `repulink` introduit un graphe
+   d'endossements explicite et etudie la responsabilite avec propagation arriere
+   de RepuLink
    ([arXiv:2606.08851](https://arxiv.org/abs/2606.08851)). Solidago
    ([arXiv:2211.01179](https://arxiv.org/abs/2211.01179)) motive le pre-trust
    explicite et une future baseline LipschiTrust, pas l'ajout d'un oracle.
+   Les aretes sont fournies par `--repulink-endorsements
+   endorser:endorsee:confidence`; elles ne sont jamais deduites de la topologie
+   ni des labels Sybil caches. En l'absence d'un corpus ou d'un modele
+   d'endossements justifie, aucune comparaison de performance RepuLink n'est
+   reclamee: une execution sans arete est seulement l'ablation "interactions
+   seules", a valider sur un held-out disjoint.
 3. **Phase 2:** distribuer les calculs par gossip et mesurer les transitions de
    phase de la transitivite de confiance
    ([arXiv:1012.1358](https://arxiv.org/abs/1012.1358)). BASALT

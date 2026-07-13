@@ -136,6 +136,49 @@ class RealNetworkBenchmarkStatisticsTests(unittest.TestCase):
         self.assertEqual(call["eigentrust_recompute_interval"], 0.25)
         self.assertEqual(len(result["eigentrust"]), 1)
 
+    def test_run_seed_passes_explicit_repulink_endorsements_once(self):
+        args = Namespace(
+            nodes=10,
+            degree=3,
+            sybil_ratio=0.15,
+            sybil_stealth=0.5,
+            sybil_extra_drop=0.65,
+            duration=1.0,
+            drain=0.0,
+            traffic_rate=1.0,
+            ttl=8,
+            link_retries=0,
+            redundancy=1,
+            redundancy_risk_tolerance=0.05,
+            receipts=False,
+            receipt_timeout=1.0,
+            churn_rate=0.0,
+            churn_recovery=0.4,
+            congestion_rate=0.0,
+            congestion_jitter=0.15,
+            perturb_interval=0.5,
+            solvers=["repulink"],
+            repulink_endorsements=((0, 4, 0.9),),
+            repulink_recompute_interval=0.25,
+            learn_runs=4,
+        )
+
+        class FakeStats:
+            @staticmethod
+            def summary():
+                return _run(0.6, 0.3, 0.2, 4.0)
+
+        runner = AsyncMock(return_value=FakeStats())
+        with patch("scripts.real_network_benchmark.run_local_cluster", runner):
+            result = asyncio.run(_run_seed(args, topo_seed=30000, base_port=45000))
+
+        runner.assert_awaited_once()
+        call = runner.await_args.kwargs
+        self.assertEqual(call["solver_name"], "repulink")
+        self.assertEqual(call["repulink_endorsements"], ((0, 4, 0.9),))
+        self.assertEqual(call["repulink_recompute_interval"], 0.25)
+        self.assertEqual(len(result["repulink"]), 1)
+
     def test_aggregate_returns_bounded_coherent_intervals_and_all_spreads(self):
         results = [
             {"edge": [_run(0.02, 0.95, 0.80, 1.0)]},

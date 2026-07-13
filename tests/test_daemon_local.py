@@ -56,6 +56,19 @@ class DaemonLocalClusterTests(unittest.TestCase):
         self.assertGreater(len(stats.delivered), 0)
         self.assertNotIn("bad_signature", stats.dropped)
 
+    def test_real_sockets_work_with_shared_repulink(self):
+        # The daemon integration must share one explicit-endorsement ledger
+        # while retaining the real UDP + ML-DSA transport path.
+        stats = asyncio.run(run_local_cluster(
+            nodes=8, degree=3, sybil_ratio=0.2, duration=2.0, drain=1.5,
+            traffic_rate=4.0, ttl=10, solver_name="repulink", seed=104,
+            repulink_endorsements=((0, 1, 0.8), (2, 3, 0.8), (4, 5, 0.8)),
+            repulink_recompute_interval=0.1, base_port=19390,
+        ))
+        self.assertGreater(stats.generated, 0)
+        self.assertGreater(len(stats.delivered), 0)
+        self.assertNotIn("bad_signature", stats.dropped)
+
     def test_edge_solver_persists_learned_state_to_disk(self):
         # Regression guard: run_local_cluster must call solver.save() at the
         # end, or "learning across repeated runs" is a no-op even though a

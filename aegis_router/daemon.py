@@ -23,6 +23,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from statistics import mean
+from typing import Iterable
 
 from .graph import LinkMetrics, NodeId, P2PGraph, generate_random_graph
 from .packet import Packet
@@ -37,9 +38,31 @@ from .solvers import (
     RoutingSolver,
     ShortestPathSolver,
 )
+from .repulink import Endorsement, RepuLinkLedger, RepuLinkSolver
 
 Registry = dict[NodeId, tuple[str, int]]
 PubkeyRegistry = dict[NodeId, bytes]
+
+
+def parse_endorsements(spec: str) -> tuple[Endorsement, ...]:
+    """Parse explicit ``endorser:endorsee:confidence`` CLI endorsements."""
+    if not spec.strip():
+        return ()
+    endorsements: list[Endorsement] = []
+    for item in spec.split(","):
+        fields = item.split(":")
+        if len(fields) != 3:
+            raise ValueError(
+                "endorsements must be endorser:endorsee:confidence entries"
+            )
+        endorser_text, endorsee_text, confidence_text = fields
+        try:
+            endorsements.append(
+                (int(endorser_text), int(endorsee_text), float(confidence_text))
+            )
+        except ValueError as exc:
+            raise ValueError(f"invalid endorsement: {item!r}") from exc
+    return tuple(endorsements)
 
 
 def _clamp(value: float, lo: float, hi: float) -> float:
@@ -558,6 +581,7 @@ def _make_solver(
     *,
     seed: int,
     trust_ledger: GlobalTrustLedger | None = None,
+    repulink_ledger: RepuLinkLedger | None = None,
 ) -> RoutingSolver:
     if name == "shortest":
         return ShortestPathSolver()
@@ -576,6 +600,10 @@ def _make_solver(
         if trust_ledger is None:
             raise ValueError("eigentrust requires a shared GlobalTrustLedger")
         return EigenTrustSolver(ledger=trust_ledger)
+    if name == "repulink":
+        if repulink_ledger is None:
+            raise ValueError("repulink requires a shared RepuLinkLedger")
+        return RepuLinkSolver(ledger=repulink_ledger)
     raise ValueError(f"unknown solver: {name}")
 
 
@@ -643,6 +671,8 @@ async def run_local_cluster(
     solver_name: str = "edge",
     eigentrust_pretrusted: tuple[NodeId, ...] | None = None,
     eigentrust_recompute_interval: float = 0.5,
+    repulink_endorsements: Iterable[Endorsement] = (),
+    repulink_recompute_interval: float = 0.5,
     seed: int = 7,
     base_port: int = 19000,
 ) -> ClusterStats:
@@ -654,6 +684,7 @@ async def run_local_cluster(
     stats = ClusterStats()
     rng = random.Random(seed + 1)
     trust_ledger = None
+    repulink_ledger = None
     if solver_name == "eigentrust":
         if eigentrust_recompute_interval <= 0.0:
             raise ValueError("eigentrust_recompute_interval must be positive")
@@ -661,6 +692,10 @@ async def run_local_cluster(
             node_ids,
             pretrusted_nodes=eigentrust_pretrusted,
         )
+    if solver_name == "repulink":
+        if repulink_recompute_interval <= 0.0:
+            raise ValueError("repulink_recompute_interval must be positive")
+        repulink_ledger = RepuLinkLedger(node_ids, endorsements=repulink_endorsements)
 
     loop = asyncio.get_running_loop()
     protocols: dict[NodeId, LocalNodeProtocol] = {}
@@ -670,6 +705,7 @@ async def run_local_cluster(
             solver_name,
             seed=seed * 1000 + n,
             trust_ledger=trust_ledger,
+            repulink_ledger=repulink_ledger,
         )
         protocol = LocalNodeProtocol(
             n, graph, solver, registry, pubkeys, identities[n], stats,
@@ -710,6 +746,16 @@ async def run_local_cluster(
     if trust_ledger is not None:
         eigentrust_task = asyncio.create_task(_eigentrust_recompute_loop())
 
+    async def _repulink_recompute_loop() -> None:
+        assert repulink_ledger is not None
+        while True:
+            await asyncio.sleep(repulink_recompute_interval)
+            repulink_ledger.recompute()
+
+    repulink_task: asyncio.Task | None = None
+    if repulink_ledger is not None:
+        repulink_task = asyncio.create_task(_repulink_recompute_loop())
+
     packet_ids = itertools.count()
     end_time = loop.time() + duration
     try:
@@ -720,7 +766,7 @@ async def run_local_cluster(
             await asyncio.sleep(rng.expovariate(traffic_rate))
         await asyncio.sleep(drain)
     finally:
-        for task in (perturb_task, receipt_sweep_task, eigentrust_task):
+        for task in (perturb_task, receipt_sweep_task, eigentrust_task, repulink_task):
             if task is not None:
                 task.cancel()
                 try:
@@ -753,6 +799,8 @@ async def run_local_cluster(
                 saver()
         if trust_ledger is not None:
             trust_ledger.recompute()
+        if repulink_ledger is not None:
+            repulink_ledger.recompute()
     return stats
 
 
@@ -776,15 +824,21 @@ def main() -> None:
     p.add_argument("--congestion-rate", type=float, default=0.0, help="fraction of edges whose metrics drift per perturbation tick")
     p.add_argument("--congestion-jitter", type=float, default=0.15)
     p.add_argument("--perturb-interval", type=float, default=0.5, help="seconds between churn/congestion ticks")
-    p.add_argument("--solver", choices=["shortest", "risk-aware", "adaptive-risk", "edge", "eigentrust"], default="edge")
+    p.add_argument("--solver", choices=["shortest", "risk-aware", "adaptive-risk", "edge", "eigentrust", "repulink"], default="edge")
     p.add_argument("--eigentrust-pretrusted", default="", help="comma-separated external trust anchors; empty uses uniform pretrust and never hidden Sybil labels")
     p.add_argument("--eigentrust-recompute-interval", type=float, default=0.5, help="seconds between shared EigenTrust power iterations")
+    p.add_argument("--repulink-endorsements", default="", help="comma-separated explicit endorser:endorsee:confidence edges; never inferred from topology")
+    p.add_argument("--repulink-recompute-interval", type=float, default=0.5, help="seconds between shared RepuLink updates")
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--base-port", type=int, default=19000)
     args = p.parse_args()
     eigentrust_pretrusted = tuple(
         int(node) for node in args.eigentrust_pretrusted.split(",") if node.strip()
     ) or None
+    try:
+        repulink_endorsements = parse_endorsements(args.repulink_endorsements)
+    except ValueError as exc:
+        p.error(str(exc))
 
     stats = asyncio.run(run_local_cluster(
         nodes=args.nodes, degree=args.degree, sybil_ratio=args.sybil_ratio,
@@ -797,6 +851,8 @@ def main() -> None:
         perturb_interval=args.perturb_interval, solver_name=args.solver,
         eigentrust_pretrusted=eigentrust_pretrusted,
         eigentrust_recompute_interval=args.eigentrust_recompute_interval,
+        repulink_endorsements=repulink_endorsements,
+        repulink_recompute_interval=args.repulink_recompute_interval,
         seed=args.seed, base_port=args.base_port,
     ))
     print(json.dumps(stats.summary(), indent=2))
