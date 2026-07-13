@@ -110,6 +110,9 @@ solveurs. Regime: 40 noeuds, degree 4, 20 s + 5 s de drain, trafic 12/s,
 `churn_rate=0.05`, `congestion_rate=0.1`, ARQ=2, redondance=1, sans recus.
 EigenTrust utilise le pre-trust uniforme. Edge repart d'un etat propre par seed,
 effectue 4 runs d'apprentissage, puis contribue une seule moyenne tail-2.
+Cette campagne remplace un resultat anterieur: une fuite de `touched_sybil`
+(label cache du simulateur) dans certains learners a ete retiree. Ce label est
+desormais reserve aux metriques d'evaluation et ne nourrit plus le routage.
 
 ```bash
 .venv/bin/python3 scripts/real_network_benchmark.py \
@@ -122,30 +125,31 @@ effectue 4 runs d'apprentissage, puis contribue une seule moyenne tail-2.
 
 | Solver | Livraison IC95 | Sybil brut IC95 | Sybil transit IC95 | Hops IC95 |
 |---|---:|---:|---:|---:|
-| `shortest` | 54.0% [50.22; 57.81] | 26.6% [20.87; 32.23] | 17.5% [12.28; 22.72] | 2.68 [2.63; 2.74] |
-| `eigentrust` | 47.0% [43.14; 50.78] | 28.2% [19.71; 36.63] | 20.6% [12.77; 28.36] | 4.82 [4.52; 5.12] |
-| `edge` | 66.4% [62.24; 70.49] | 22.4% [18.30; 26.41] | 10.9% [7.92; 13.95] | 3.57 [3.43; 3.72] |
+| `shortest` | 53.9% [50.15; 57.72] | 26.6% [20.85; 32.34] | 17.5% [12.28; 22.81] | 2.68 [2.63; 2.73] |
+| `eigentrust` | 48.2% [44.27; 52.04] | 28.0% [18.53; 37.47] | 20.6% [11.78; 29.50] | 4.86 [4.53; 5.19] |
+| `edge` | 65.2% [60.99; 69.40] | 24.2% [19.99; 28.37] | 13.2% [9.87; 16.54] | 3.51 [3.33; 3.69] |
 
 Spreads inter-seed, dans le meme ordre de metriques:
 
 | Solver | Livraison | Sybil brut | Sybil transit | Hops |
 |---|---:|---:|---:|---:|
-| `shortest` | 17.49 pp | 24.60 pp | 22.25 pp | 0.25 |
-| `eigentrust` | 16.30 pp | 36.08 pp | 36.37 pp | 1.50 |
-| `edge` | 15.16 pp | 17.00 pp | 13.01 pp | 0.72 |
+| `shortest` | 17.49 pp | 25.06 pp | 22.71 pp | 0.22 |
+| `eigentrust` | 17.12 pp | 37.53 pp | 37.80 pp | 1.65 |
+| `edge` | 18.32 pp | 18.23 pp | 14.95 pp | 0.95 |
 
 Ecarts apparies contre `shortest`, positifs quand ils constituent un gain:
 
-- `edge`: livraison `+12.35 pp [9.94; 14.75]`, reduction Sybil brute
-  `+4.20 pp [1.29; 7.11]`, reduction Sybil transit
-  `+6.56 pp [3.57; 9.56]`, tous significatifs. Cout significatif:
-  `+0.89 hop [0.75; 1.03]`.
-- `eigentrust`: livraison `-7.06 pp [-9.52; -4.59]` et
-  `+2.13 hops [1.84; 2.43]`, regressions significatives. Les variations Sybil
+- `edge`: livraison `+11.26 pp [9.01; 13.50]` et reduction Sybil transit
+  `+4.34 pp [1.53; 7.14]`, significatives. La reduction Sybil brute
+  `+2.42 pp [-0.41; 5.24]` ne l'est pas. Cout significatif:
+  `+0.83 hop [0.67; 0.99]`.
+- `eigentrust`: livraison `-5.78 pp [-8.43; -3.14]` et
+  `+2.18 hops [1.84; 2.52]`, regressions significatives. Les variations Sybil
   brute et transit ne sont pas significatives.
 
 Conclusion limitee a ce regime: edge est au-dessus des deux baselines pour la
-livraison et l'exposition Sybil transit, au prix de chemins plus longs.
+livraison et l'exposition Sybil transit, au prix de chemins plus longs. La
+reduction Sybil brute n'est pas etablie apres retrait de l'oracle.
 EigenTrust global glouton est une baseline informative mais pas une direction de
 deploiement en l'etat. Cette campagne ne prouve ni anonymat, ni securite en
 environnement distribue, ni generalisation au-dela du loopback et de cette

@@ -16,13 +16,13 @@ class AdaptiveRiskSolverTests(unittest.TestCase):
 
         self.assertGreater(solver.risk_budget, 0.20)
 
-    def test_tightens_budget_after_many_sybil_touches(self):
+    def test_ignores_hidden_sybil_labels_when_adapting_budget(self):
         solver = AdaptiveRiskSolver(risk_budget=0.40, min_budget=0.10, max_budget=0.60, adapt_step=0.05, window_size=4)
 
         for i in range(4):
             solver.observe_result(neighbor=i, delivered=True, dropped=False, touched_sybil=True)
 
-        self.assertLess(solver.risk_budget, 0.40)
+        self.assertEqual(solver.risk_budget, 0.40)
 
     def test_adaptive_improves_delivery_vs_static_risk_aware_while_beating_shortest_sybil(self):
         graph = generate_random_graph(nodes=80, degree=5, sybil_ratio=0.2, seed=51)

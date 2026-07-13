@@ -262,15 +262,15 @@ class EventDrivenSimulator:
         neighbor = getattr(pkt, "last_neighbor", None)
         from_node = getattr(pkt, "last_from", None)
         if observer is not None and neighbor is not None:
+            # The simulator knows Sybil membership to produce evaluator
+            # metrics, but a router only observes that its own forward failed.
+            observable_reason = "link_loss" if reason == "sybil_drop" else reason
             observer(
                 neighbor=neighbor,
                 delivered=delivered,
                 dropped=dropped,
-                # Blame the sybil touch only on the hop where it happened.
-                # pkt.touched_sybil is path-cumulative: passing it here poisons
-                # the reputation of honest hops that merely came after a sybil.
-                touched_sybil=(reason == "sybil_drop"),
-                reason=reason,
+                touched_sybil=False,
+                reason=observable_reason,
                 from_node=from_node,
             )
 

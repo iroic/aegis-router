@@ -20,7 +20,7 @@ class PersistentLearningTests(unittest.TestCase):
 
             loaded = PersistentLearningSolver(state_path=path)
             self.assertGreater(loaded.peer_scores[7].drops, 0)
-            self.assertGreater(loaded.peer_scores[7].sybil_touches, 0)
+            self.assertEqual(loaded.peer_scores[7].sybil_touches, 0)
 
     def test_learns_to_avoid_bad_neighbor_across_restarts(self):
         g = P2PGraph()
