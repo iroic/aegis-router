@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 from dataclasses import dataclass
 
 from pqcrypto.kem import ml_kem_768
@@ -102,6 +103,78 @@ def verify_receipt(packet_id: int, src: int, dst: int, created_at: float, receip
     try:
         signature = base64.b64decode(encoded, validate=True)
         return bool(ml_dsa_44.verify(dst_public_key, _origin_signing_bytes(packet_id, src, dst, created_at), signature))
+    except Exception:
+        return False
+
+
+def endorsement_signing_bytes(
+    endorser: int,
+    endorsee: int,
+    confidence: float,
+    issued_at: float,
+    expires_at: float,
+) -> bytes:
+    """Canonical, replay-bounded bytes for a RepuLink endorsement."""
+    values = (confidence, issued_at, expires_at)
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("endorsement fields must be finite")
+    if not 0.0 < confidence <= 1.0:
+        raise ValueError("endorsement confidence must be in (0, 1]")
+    if expires_at <= issued_at:
+        raise ValueError("endorsement expiry must follow issuance")
+    payload = {
+        "confidence": confidence,
+        "endorsee": endorsee,
+        "endorser": endorser,
+        "expires_at": expires_at,
+        "issued_at": issued_at,
+        "kind": "aegis-repulink-endorsement-v1",
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def sign_endorsement(
+    endorser: int,
+    endorsee: int,
+    confidence: float,
+    issued_at: float,
+    expires_at: float,
+    signing_secret_key: bytes,
+) -> str:
+    """Sign one explicit, time-bounded RepuLink endorsement with ML-DSA-44."""
+    signature = ml_dsa_44.sign(
+        signing_secret_key,
+        endorsement_signing_bytes(
+            endorser, endorsee, confidence, issued_at, expires_at,
+        ),
+    )
+    return f"{SIGNATURE_PREFIX}{base64.b64encode(signature).decode('ascii')}"
+
+
+def verify_endorsement(
+    endorser: int,
+    endorsee: int,
+    confidence: float,
+    issued_at: float,
+    expires_at: float,
+    signature: str,
+    endorser_public_key: bytes,
+) -> bool:
+    """Verify a signed endorsement against its claimed endorser identity."""
+    if not signature or not signature.startswith(SIGNATURE_PREFIX):
+        return False
+    try:
+        encoded = signature[len(SIGNATURE_PREFIX):]
+        raw_signature = base64.b64decode(encoded, validate=True)
+        return bool(ml_dsa_44.verify(
+            endorser_public_key,
+            endorsement_signing_bytes(
+                endorser, endorsee, confidence, issued_at, expires_at,
+            ),
+            raw_signature,
+        ))
+    except (ValueError, TypeError):
+        return False
     except Exception:
         return False
 

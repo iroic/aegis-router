@@ -5,7 +5,8 @@ import unittest
 from aegis_router.daemon import _make_solver, parse_endorsements
 from aegis_router.graph import LinkMetrics, P2PGraph
 from aegis_router.packet import Packet
-from aegis_router.repulink import RepuLinkLedger, RepuLinkSolver
+from aegis_router.postquantum_crypto import PostQuantumIdentity, sign_endorsement
+from aegis_router.repulink import RepuLinkLedger, RepuLinkSolver, SignedEndorsement
 from aegis_router.solvers import ShortestPathSolver
 
 
@@ -66,6 +67,55 @@ class RepuLinkLedgerTests(unittest.TestCase):
             ledger.add_endorsement(1, 1, 0.5)
         with self.assertRaisesRegex(ValueError, "unknown node"):
             ledger.add_endorsement(1, 9, 0.5)
+
+    def test_signed_endorsement_requires_anchor_validity_and_authenticity(self):
+        anchor = PostQuantumIdentity.generate()
+        untrusted = PostQuantumIdentity.generate()
+        ledger = RepuLinkLedger((0, 1, 2), trusted_endorsers=(0,))
+        signed = SignedEndorsement(
+            endorser=0,
+            endorsee=2,
+            confidence=0.8,
+            issued_at=100.0,
+            expires_at=200.0,
+            signature=sign_endorsement(
+                0, 2, 0.8, 100.0, 200.0, anchor.signing_secret_key,
+            ),
+        )
+
+        ledger.add_signed_endorsement(
+            signed, public_keys={0: anchor.signing_public_key}, now=150.0,
+        )
+        self.assertEqual(ledger.endorsement_edges, {(0, 2): 0.8})
+        self.assertEqual(ledger.diagnostics()["signed_endorsements_accepted"], 1)
+
+        forged = SignedEndorsement(
+            endorser=0, endorsee=1, confidence=0.8, issued_at=100.0,
+            expires_at=200.0,
+            signature=sign_endorsement(
+                0, 1, 0.8, 100.0, 200.0, untrusted.signing_secret_key,
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "invalid endorsement signature"):
+            ledger.add_signed_endorsement(
+                forged, public_keys={0: anchor.signing_public_key}, now=150.0,
+            )
+        with self.assertRaisesRegex(ValueError, "not currently valid"):
+            ledger.add_signed_endorsement(
+                signed, public_keys={0: anchor.signing_public_key}, now=201.0,
+            )
+
+        non_anchor = SignedEndorsement(
+            endorser=1, endorsee=2, confidence=0.8, issued_at=100.0,
+            expires_at=200.0,
+            signature=sign_endorsement(
+                1, 2, 0.8, 100.0, 200.0, untrusted.signing_secret_key,
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "not a configured trust anchor"):
+            ledger.add_signed_endorsement(
+                non_anchor, public_keys={1: untrusted.signing_public_key}, now=150.0,
+            )
 
 
 class RepuLinkSolverTests(unittest.TestCase):

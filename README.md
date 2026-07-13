@@ -88,6 +88,10 @@ et mecanismes deployables:
    d'endossements justifie, aucune comparaison de performance RepuLink n'est
    reclamee: une execution sans arete est seulement l'ablation "interactions
    seules", a valider sur un held-out disjoint.
+   Les endossements de deploiement peuvent etre signes ML-DSA-44, bornes dans
+   le temps et verifies contre une allowlist explicite d'ancres. La signature
+   authentifie l'emetteur; elle ne transforme pas un Sybil auto-signe en ancre
+   de confiance.
 3. **Phase 2:** distribuer les calculs par gossip et mesurer les transitions de
    phase de la transitivite de confiance
    ([arXiv:1012.1358](https://arxiv.org/abs/1012.1358)). BASALT
