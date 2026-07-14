@@ -36,6 +36,7 @@ class EventStats:
     avg_queue_delay: float
     avg_loss_risk: float
     sybil_touch_ratio: float
+    transit_sybil_touch_ratio: float = 0.0
     retransmissions: int = 0
 
     @property
@@ -235,6 +236,9 @@ class EventDrivenSimulator:
         if lost:
             pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
             pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+            # Track transit Sybil exposure: a sybil chosen as RELAY (not destination)
+            if nxt in self.graph.sybil_nodes and nxt != pkt.dst:
+                pkt.touched_transit_sybil = True
             pkt.last_from = pkt.node
             pkt.last_neighbor = nxt
             reason = "sybil_drop" if nxt in self.graph.sybil_nodes else "link_loss"
@@ -250,6 +254,9 @@ class EventDrivenSimulator:
         pkt.latency += (metrics.latency + queue_delay + service) + failed_tries * (metrics.latency + service)
         pkt.loss_risk = 1.0 - ((1.0 - pkt.loss_risk) * (1.0 - effective_loss))
         pkt.touched_sybil = pkt.touched_sybil or nxt in self.graph.sybil_nodes
+        # Track transit Sybil exposure: a sybil chosen as RELAY (not destination)
+        if nxt in self.graph.sybil_nodes and nxt != pkt.dst:
+            pkt.touched_transit_sybil = True
         pkt.last_from = pkt.node
         pkt.node = nxt
         pkt.last_neighbor = nxt
@@ -288,5 +295,6 @@ class EventDrivenSimulator:
             avg_queue_delay=mean([p.queue_delay for p in all_packets]) if all_packets else 0.0,
             avg_loss_risk=mean([p.loss_risk for p in all_packets]) if all_packets else 0.0,
             sybil_touch_ratio=sum(1 for p in all_packets if p.touched_sybil) / max(1, len(all_packets)),
+            transit_sybil_touch_ratio=sum(1 for p in all_packets if p.touched_transit_sybil) / max(1, len(all_packets)),
             retransmissions=self._retransmissions,
         )

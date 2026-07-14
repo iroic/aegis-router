@@ -124,36 +124,44 @@ desormais reserve aux metriques d'evaluation et ne nourrit plus le routage.
   --sybil-ratio 0.15 --sybil-stealth 0.5 --sybil-extra-drop 0.65 \
   --churn-rate 0.05 --congestion-rate 0.1 --link-retries 2 --redundancy 1 \
   --topology-seeds 10 --base-seed 30000 --learn-runs 4 --tail 2 \
-  --solvers shortest,eigentrust,edge
+  --solvers shortest,eigentrust,repulink,edge
 ```
 
 | Solver | Livraison IC95 | Sybil brut IC95 | Sybil transit IC95 | Hops IC95 |
 |---|---:|---:|---:|---:|
-| `shortest` | 53.9% [50.15; 57.72] | 26.6% [20.85; 32.34] | 17.5% [12.28; 22.81] | 2.68 [2.63; 2.73] |
-| `eigentrust` | 48.2% [44.27; 52.04] | 28.0% [18.53; 37.47] | 20.6% [11.78; 29.50] | 4.86 [4.53; 5.19] |
-| `edge` | 65.2% [60.99; 69.40] | 24.2% [19.99; 28.37] | 13.2% [9.87; 16.54] | 3.51 [3.33; 3.69] |
+| `shortest` | 54.1% [50.40; 57.72] | 26.6% [20.79; 32.33] | 17.6% [12.32; 22.85] | 2.68 [2.63; 2.73] |
+| `eigentrust` | 47.6% [43.94; 51.21] | 27.9% [19.38; 36.35] | 20.3% [12.30; 28.23] | 4.86 [4.54; 5.19] |
+| `repulink` | 46.3% [42.35; 50.24] | 26.7% [18.32; 35.10] | 19.2% [11.57; 26.74] | 5.09 [4.76; 5.43] |
+| `edge` | 65.3% [61.43; 69.07] | 24.2% [20.08; 28.35] | 13.3% [10.00; 16.63] | 3.52 [3.33; 3.70] |
 
 Spreads inter-seed, dans le meme ordre de metriques:
 
 | Solver | Livraison | Sybil brut | Sybil transit | Hops |
 |---|---:|---:|---:|---:|
-| `shortest` | 17.49 pp | 25.06 pp | 22.71 pp | 0.22 |
-| `eigentrust` | 17.12 pp | 37.53 pp | 37.80 pp | 1.65 |
-| `edge` | 18.32 pp | 18.23 pp | 14.95 pp | 0.95 |
+| `shortest` | 16.81 pp | 25.95 pp | 23.13 pp | 0.22 |
+| `eigentrust` | 17.03 pp | 36.13 pp | 38.12 pp | 1.49 |
+| `repulink` | 18.22 pp | 37.99 pp | 34.73 pp | 1.51 |
+| `edge` | 15.47 pp | 18.23 pp | 15.18 pp | 0.91 |
 
 Ecarts apparies contre `shortest`, positifs quand ils constituent un gain:
 
-- `edge`: livraison `+11.26 pp [9.01; 13.50]` et reduction Sybil transit
-  `+4.34 pp [1.53; 7.14]`, significatives. La reduction Sybil brute
-  `+2.42 pp [-0.41; 5.24]` ne l'est pas. Cout significatif:
-  `+0.83 hop [0.67; 0.99]`.
-- `eigentrust`: livraison `-5.78 pp [-8.43; -3.14]` et
-  `+2.18 hops [1.84; 2.52]`, regressions significatives. Les variations Sybil
+- `edge`: livraison `+11.19 pp [8.96; 13.43]` et reduction Sybil transit
+  `+4.27 pp [1.43; 7.10]`, significatives. La reduction Sybil brute
+  `+2.35 pp [-0.39; 5.08]` ne l'est pas. Cout significatif:
+  `+0.83 hop [0.67; 1.00]`.
+- `eigentrust`: livraison `-6.48 pp [-8.94; -4.02]` et
+  `+2.18 hops [1.87; 2.49]`, regressions significatives. Les variations Sybil
   brute et transit ne sont pas significatives.
+- `repulink` sans endossement explicite: livraison `-7.76 pp [-11.62; -3.91]`
+  et `+2.41 hops [2.08; 2.74]`, regressions significatives. Les variations
+  Sybil brute et transit ne sont pas significatives. C'est une ablation
+  "interactions seules", pas une mesure de la variante a ancres signees.
 
 Conclusion limitee a ce regime: edge est au-dessus des deux baselines pour la
-livraison et l'exposition Sybil transit, au prix de chemins plus longs. La
-reduction Sybil brute n'est pas etablie apres retrait de l'oracle.
+livraison et l'exposition Sybil transit, au prix de chemins plus longs. Edge
+est aussi au-dessus des deux baselines globales testees ici. La reduction Sybil
+brute n'est pas etablie apres retrait de l'oracle, et aucun resultat RepuLink
+avec endossements signes n'est encore etabli.
 EigenTrust global glouton est une baseline informative mais pas une direction de
 deploiement en l'etat. Cette campagne ne prouve ni anonymat, ni securite en
 environnement distribue, ni generalisation au-dela du loopback et de cette
